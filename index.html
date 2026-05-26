@@ -1,0 +1,4605 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BeFine Article Manager</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --z-table-cell: 1;
+      --z-sticky-col: 2;
+      --z-header: 3;
+      --z-sticky-header: 4;
+      --z-filter: 5;
+      --z-modal: 100;
+      --bg: #fafafa;
+      --text: #0f172a;
+      --muted: #64748b;
+      --label: #334155;
+      --line: #e2e8f0;
+      --line-soft: #f1f5f9;
+      --primary: #0ea5e9;
+      --primary-hover: #0284c7;
+      --card-bg: rgba(255, 255, 255, 0.9);
+      --card-border: rgba(226, 232, 240, 0.8);
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+      --font: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      min-height: 100%;
+      background:
+        radial-gradient(circle at 0% 0%, rgba(14, 165, 233, 0.12), transparent 35%),
+        radial-gradient(circle at 100% 10%, rgba(16, 185, 129, 0.12), transparent 30%),
+        var(--bg);
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 0% 0%, rgba(14, 165, 233, 0.12), transparent 35%),
+        radial-gradient(circle at 100% 10%, rgba(16, 185, 129, 0.12), transparent 30%),
+        var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      letter-spacing: 0;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .app-shell {
+      width: 100%;
+      max-width: 100%;
+      margin: 0;
+      padding: 1rem;
+    }
+
+    .stack {
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    .login-wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .login-card {
+      width: min(100%, 420px);
+      text-align: center;
+    }
+
+    .login-title {
+      margin: 0 0 0.5rem;
+      color: var(--text);
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+    }
+
+    .login-copy {
+      margin: 0 0 1.5rem;
+      color: var(--muted);
+      font-size: 0.875rem;
+      line-height: 1.6;
+    }
+
+    .google-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      padding: 10px 24px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      font-size: 15px;
+      font-weight: 500;
+      transition: box-shadow 160ms ease, background-color 160ms ease, transform 160ms ease;
+    }
+
+    .google-btn:hover {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+      background: #fff;
+    }
+
+    .google-mark {
+      width: 20px;
+      height: 20px;
+      display: block;
+      flex: 0 0 auto;
+    }
+
+    .header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 2px 10px;
+      border: 1px solid var(--line);
+      border-radius: 9999px;
+      background: #f1f5f9;
+      color: #334155;
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    h1 {
+      margin: 0.75rem 0 0;
+      color: var(--text);
+      font-size: 2.25rem;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.025em;
+    }
+
+    .subtext {
+      margin: 0.5rem 0 0;
+      color: var(--muted);
+      font-size: 0.875rem;
+      line-height: 1.6;
+    }
+
+    .btn-secondary {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 6px 16px;
+      background: #fff;
+      color: var(--text);
+      box-shadow: var(--shadow-sm);
+      font-size: 14px;
+      font-weight: 500;
+      transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+      white-space: nowrap;
+    }
+
+    .btn-secondary:hover,
+    .edit-btn:hover {
+      background: #f1f5f9;
+    }
+
+    .card {
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      background: var(--card-bg);
+      box-shadow: var(--shadow-sm);
+      padding: 24px;
+      transition: transform 160ms ease, box-shadow 160ms ease;
+    }
+
+    .tab-bar {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .tab-button {
+      border: 0;
+      border-bottom: 2px solid transparent;
+      background: transparent;
+      color: #64748b;
+      padding: 8px 16px;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .tab-button.active {
+      border-bottom-color: #0ea5e9;
+      color: #0ea5e9;
+      font-weight: 600;
+    }
+
+    .tab-panel {
+      display: block;
+    }
+
+    .tab-panel.hidden-panel {
+      display: none;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .kpi-label {
+      margin: 0 0 0.5rem;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.3;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .kpi-value {
+      margin: 0;
+      color: var(--text);
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+
+    .kpi-sub {
+      margin: 0.5rem 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .trend-up {
+      color: #dc2626;
+      font-weight: 700;
+    }
+
+    .trend-down {
+      color: #16a34a;
+      font-weight: 700;
+    }
+
+    .card-title {
+      margin: 0 0 1rem;
+      color: var(--text);
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+      align-items: end;
+      background: #fff;
+      position: relative;
+      z-index: var(--z-filter);
+    }
+
+    .form-field {
+      display: grid;
+      gap: 4px;
+    }
+
+    .checkbox-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 12px;
+    }
+    .checkbox-grid label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .master-section {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px 16px;
+    }
+    .master-section summary {
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .master-section[open] summary {
+      margin-bottom: 12px;
+    }
+    .master-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .master-row input {
+      flex: 1;
+      padding: 4px 8px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+    .master-row button {
+      padding: 2px 8px;
+      font-size: 0.75rem;
+      border-radius: 4px;
+      border: 1px solid var(--line);
+      background: var(--bg);
+    }
+    .master-row button.delete-master {
+      color: #dc2626;
+      border-color: #fecaca;
+    }
+    .master-add-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .master-add-row input {
+      flex: 1;
+      padding: 4px 8px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+    .master-add-row button {
+      padding: 4px 12px;
+      font-size: 0.75rem;
+      border-radius: 4px;
+      border: none;
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .form-field.full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      color: var(--label);
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--text);
+      outline-color: var(--primary);
+      padding: 8px 12px;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    textarea {
+      min-height: 84px;
+      resize: vertical;
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      grid-column: 1 / -1;
+    }
+
+    .btn-primary {
+      border: 0;
+      border-radius: 6px;
+      background: var(--primary);
+      color: #fff;
+      box-shadow: var(--shadow-sm);
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-primary:disabled,
+    .btn-secondary:disabled,
+    .google-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.62;
+    }
+
+    .table-card {
+      padding: 16px 20px;
+      overflow: hidden;
+    }
+
+    .table-card:hover {
+      transform: none;
+    }
+
+    .table-headline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 24px 24px 0;
+      background: #fff;
+      position: relative;
+      z-index: var(--z-filter);
+    }
+
+    .table-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .worker-filter-bar {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+      align-items: end;
+      padding: 16px 24px 0;
+    }
+
+    .worker-count {
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 600;
+      text-align: right;
+    }
+
+    .table-wrap {
+      width: 100%;
+      max-width: calc(100vw - 2rem);
+      overflow: auto;
+      overscroll-behavior: auto;
+      touch-action: auto;
+      -webkit-overflow-scrolling: touch;
+      max-height: 70vh;
+      position: relative;
+      background: #fff;
+    }
+
+    .article-table-area {
+      position: relative;
+      min-height: 220px;
+    }
+
+    .loading-overlay {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      min-height: 220px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+      background: #fff;
+      border-top: 1px solid var(--line-soft);
+    }
+
+    .loading-overlay.visible {
+      display: flex;
+    }
+
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid var(--line-soft);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+     spin {
+      to { transform: rotate(360deg); }
+    }
+
+    table {
+      width: 100%;
+      min-width: 2400px;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 12px;
+    }
+
+    th {
+      border-bottom: 1px solid var(--line);
+      position: sticky;
+      top: 0;
+      z-index: var(--z-header);
+      background: #fff !important;
+      padding: 8px 10px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.4;
+      letter-spacing: 0;
+      text-align: left;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    td {
+      border-bottom: 1px solid var(--line-soft);
+      padding: 8px 10px;
+      color: #1e293b;
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.45;
+      vertical-align: middle;
+      white-space: nowrap;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    td.title-cell {
+      max-width: 280px;
+    }
+
+    td.memo-cell {
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    td.url-cell {
+      max-width: 200px;
+    }
+
+    .genre-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    tbody tr:hover {
+      background: #f8fafc;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .title-cell {
+      color: var(--text);
+      font-weight: 600;
+      min-width: 180px;
+    }
+
+    .url-cell {
+      max-width: 230px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .memo-cell {
+      max-width: 260px;
+      color: var(--label);
+      white-space: normal;
+    }
+
+    td[data-field], td[data-order-field="delivered_at"] {
+      cursor: pointer;
+    }
+    td[data-field]:hover, td[data-order-field="delivered_at"]:hover {
+      background: rgba(14, 165, 233, 0.06);
+    }
+    td[data-field] .inline-edit {
+      width: 100%;
+      min-width: 60px;
+      padding: 2px 4px;
+      border: 1px solid var(--primary);
+      border-radius: 3px;
+      font: inherit;
+      font-size: 0.8rem;
+      outline: none;
+    }
+    td[data-field] mark {
+      background: #fef08a;
+      color: inherit;
+      padding: 0 1px;
+      border-radius: 2px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.4;
+      white-space: nowrap;
+    }
+
+    .status-published {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .status-writing {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .status-draft {
+      background: #e5e7eb;
+      color: #374151;
+    }
+
+    .status-green {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .status-yellow {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .status-gray {
+      background: #e5e7eb;
+      color: #374151;
+    }
+
+    .priority-critical { background: #fee2e2; color: #991b1b; }
+    .priority-high { background: #ffedd5; color: #9a3412; }
+    .priority-medium { background: #fef3c7; color: #92400e; }
+    .priority-low { background: #e0f2fe; color: #075985; }
+    .audit-status-open { background: #fee2e2; color: #991b1b; }
+    .audit-status-progress { background: #fef3c7; color: #92400e; }
+    .audit-status-done { background: #dcfce7; color: #166534; }
+    .audit-status-ignored { background: #e5e7eb; color: #374151; }
+    .audit-kpi-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+    .audit-kpi-card { flex: 1; min-width: 120px; padding: 1rem; border-radius: 8px; background: var(--card-bg); border: 1px solid var(--card-border); box-shadow: var(--shadow-sm); text-align: center; }
+    .audit-kpi-card .kpi-value { font-size: 1.75rem; font-weight: 700; line-height: 1.2; }
+    .audit-kpi-card .kpi-label { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+    .audit-response-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+    .audit-response-grid .full { grid-column: 1 / -1; }
+    .audit-response-grid textarea { min-height: 78px; resize: vertical; }
+
+    .status-requested {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .sticky-id {
+      position: sticky;
+      left: 30px;
+      z-index: var(--z-sticky-col);
+      background: #fff !important;
+      min-width: 70px;
+      max-width: none;
+      overflow: visible;
+      text-overflow: clip;
+    }
+
+    .sticky-title {
+      position: sticky;
+      left: 100px;
+      z-index: var(--z-sticky-col);
+      background: #fff !important;
+      box-shadow: 2px 0 4px rgba(0, 0, 0, 0.08);
+      min-width: 250px;
+      max-width: 300px;
+    }
+
+    th.sticky-id, th.sticky-title {
+      z-index: var(--z-sticky-header);
+      background: #fff !important;
+    }
+
+    tr:hover .sticky-id, tr:hover .sticky-title {
+      background: #f8fafc !important;
+    }
+
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+    }
+    th.sortable:hover {
+      color: var(--primary);
+    }
+    th.sortable::after {
+      content: ' ↕';
+      font-size: 10px;
+      opacity: 0.4;
+    }
+    th.sortable.sort-asc::after { content: ' ↑'; opacity: 1; }
+    th.sortable.sort-desc::after { content: ' ↓'; opacity: 1; }
+
+    .date-overdue {
+      color: #dc2626;
+      font-weight: 700;
+    }
+
+    .worker-role-badge {
+      background: #e0f2fe;
+      color: #075985;
+    }
+
+    .toggle-button.active {
+      border-color: #86efac;
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .action-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .edit-btn {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 4px 12px;
+      background: transparent;
+      color: #334155;
+      font-size: 13px;
+      line-height: 1.45;
+      transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+    }
+
+    .delete-btn {
+      border: 1px solid #fecaca;
+      border-radius: 6px;
+      padding: 4px 12px;
+      background: transparent;
+      color: #dc2626;
+      font-size: 13px;
+      line-height: 1.45;
+      transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+    }
+
+    .delete-btn:hover {
+      background: #fef2f2;
+    }
+
+    .empty-state {
+      padding: 24px;
+      color: var(--muted);
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .table-total {
+      border-top: 1px solid var(--line);
+      padding: 16px 24px;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 700;
+      text-align: right;
+    }
+
+    .notice {
+      display: none;
+      border: 1px solid rgba(14, 165, 233, 0.22);
+      border-radius: 8px;
+      background: rgba(240, 249, 255, 0.82);
+      color: #075985;
+      padding: 10px 12px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .notice.error {
+      border-color: rgba(252, 165, 165, 0.75);
+      background: #fef2f2;
+      color: #991b1b;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: var(--z-modal);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-card {
+      width: min(100%, 640px);
+      max-height: calc(100vh - 2rem);
+      overflow: auto;
+      padding: 24px;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .modal-title {
+      margin: 0;
+      color: var(--text);
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .close-btn {
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: #334155;
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .close-btn:hover {
+      background: #f1f5f9;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 760px) {
+      .app-shell {
+        padding: 1.25rem;
+      }
+
+      .header {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .header-actions {
+        display: flex;
+        justify-content: flex-start;
+      }
+
+      h1 {
+        font-size: 2rem;
+      }
+
+      .kpi-grid,
+      .metrics-grid,
+      .form-grid,
+      .filter-grid,
+      .audit-response-grid,
+      .worker-filter-bar {
+        grid-template-columns: 1fr;
+      }
+
+      .table-headline {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .worker-count {
+        text-align: left;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main id="loginView" class="login-wrap">
+    <section class="card login-card">
+      <h1 class="login-title">BeFine Article Manager</h1>
+      <p class="login-copy">Googleアカウントでログインして記事管理を開始します。</p>
+      <button id="loginButton" class="google-btn" type="button">
+        <svg class="google-mark" viewBox="0 0 48 48" aria-hidden="true">
+          <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.1 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.4-.4-3.5z"></path>
+          <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.1 6.1 29.3 4 24 4 16.2 4 9.5 8.5 6.3 14.7z"></path>
+          <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.3 0-9.8-3.4-11.4-8.1L6 33C9.2 39.5 16 44 24 44z"></path>
+          <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.2-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"></path>
+        </svg>
+        Googleでログイン
+      </button>
+    </section>
+  </main>
+
+  <main id="appView" class="app-shell stack hidden">
+    <header class="header">
+      <div>
+        <span class="badge">ARTICLE CMS</span>
+        <h1>BeFine Article Manager</h1>
+        <p class="subtext">記事の作成、ステータス管理、URLとキーワードの確認をまとめて行えます。</p>
+      </div>
+      <div class="header-actions">
+        <button id="signOutButton" class="btn-secondary" type="button">Sign out</button>
+      </div>
+    </header>
+
+    <nav class="tab-bar" aria-label="管理タブ">
+      <button class="tab-button active" type="button" data-tab="articles">記事管理</button>
+      <button class="tab-button" type="button" data-tab="orders">発注管理</button>
+      <button class="tab-button" type="button" data-tab="rewrite">リライト管理</button>
+      <button class="tab-button" type="button" data-tab="workflow">工程別ビュー</button>
+      <button class="tab-button" type="button" data-tab="workers">ライター管理</button>
+      <button class="tab-button" type="button" data-tab="audit">情報監査</button>
+    </nav>
+
+    <div id="notice" class="notice" role="status"></div>
+
+    <section id="articlesTab" class="tab-panel stack">
+      <section class="kpi-grid" aria-label="主要指標">
+        <article class="card">
+          <p class="kpi-label">全記事数</p>
+          <p id="totalCount" class="kpi-value">0</p>
+        </article>
+        <article class="card">
+          <p class="kpi-label">公開中</p>
+          <p id="publishedCount" class="kpi-value">0</p>
+        </article>
+        <article class="card">
+          <p class="kpi-label">執筆中</p>
+          <p id="writingCount" class="kpi-value">0</p>
+        </article>
+      </section>
+
+      <section class="metrics-grid" aria-label="補助指標">
+        <article class="card">
+          <p class="kpi-label">下書き数</p>
+          <p id="draftCount" class="kpi-value">0</p>
+        </article>
+        <article class="card">
+          <p class="kpi-label">今日更新数</p>
+          <p id="todayCount" class="kpi-value">0</p>
+        </article>
+      </section>
+
+      <details class="master-section" id="masterSection">
+        <summary>カテゴリ・クライアント管理</summary>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;">
+          <div>
+            <h3 style="font-size:0.85rem;margin:0 0 8px;">施術ジャンル</h3>
+            <div id="masterCategoryList"></div>
+            <div class="master-add-row">
+              <input id="newCategoryName" type="text" placeholder="新しいカテゴリ名">
+              <button type="button" id="addCategoryBtn">追加</button>
+            </div>
+          </div>
+          <div>
+            <h3 style="font-size:0.85rem;margin:0 0 8px;">クライアント</h3>
+            <div id="masterClientList"></div>
+            <div class="master-add-row">
+              <input id="newClientName" type="text" placeholder="新しいクライアント名">
+              <button type="button" id="addClientBtn">追加</button>
+            </div>
+          </div>
+          <div>
+            <h3 style="font-size:0.85rem;margin:0 0 8px;">記事カテゴリ</h3>
+            <div id="masterArticleCategoryList"></div>
+            <div class="master-add-row">
+              <input id="newArticleCategoryName" type="text" placeholder="新しい記事カテゴリ名">
+              <button type="button" id="addArticleCategoryBtn">追加</button>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <section class="card table-card">
+        <div class="table-headline">
+          <h2 class="card-title">記事一覧</h2>
+          <div class="table-actions">
+            <button id="newArticleButton" class="btn-primary" type="button">+ 新規記事</button>
+            <button id="exportArticlesBtn" class="btn-secondary" type="button">CSVエクスポート</button>
+            <button id="bulkDeleteBtn" class="btn-secondary" type="button" style="display:none;color:#dc2626;">0件削除</button>
+            <button id="refreshButton" class="btn-secondary" type="button">更新</button>
+          </div>
+        </div>
+        <div class="filter-grid" style="margin-bottom:12px;">
+          <div class="form-field">
+            <label for="articleSearchInput">検索</label>
+            <input id="articleSearchInput" type="text" placeholder="KW・タイトルで検索" autocomplete="off">
+          </div>
+          <div class="form-field">
+            <label for="articleStatusFilter">ステータス</label>
+            <select id="articleStatusFilter">
+              <option value="">全て</option>
+              <option value="公開中">公開中</option>
+              <option value="執筆中">執筆中</option>
+              <option value="下書き">下書き</option>
+              <option value="公開停止中">公開停止中</option>
+              <option value="作成中止">作成中止</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="articleGenreFilter">ジャンル</label>
+            <select id="articleGenreFilter">
+              <option value="">全て</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="articleReleaseFilter">リリース</label>
+            <select id="articleReleaseFilter">
+              <option value="">全て</option>
+              <option value="記事完了待ち">記事完了待ち</option>
+              <option value="リリース可能">リリース可能</option>
+              <option value="リリース済">リリース済</option>
+              <option value="リライト中">リライト中</option>
+              <option value="保留">保留</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="articleCategoryFilter">記事カテゴリ</label>
+            <select id="articleCategoryFilter">
+              <option value="">全て</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+          <div id="articleFilterCount" style="font-size:0.75rem;color:var(--muted);"></div>
+          <div id="articlePager" style="display:flex;"></div>
+        </div>
+        <div id="emptyState" class="empty-state hidden">記事がまだありません。</div>
+        <div class="article-table-area">
+          <div id="articleLoadingOverlay" class="loading-overlay" aria-live="polite" aria-busy="true">
+            <span class="spinner" aria-hidden="true"></span>
+            <span>読み込み中...</span>
+          </div>
+          <div id="articleTableWrap" class="table-wrap">
+            <table aria-label="記事一覧">
+            <thead>
+              <tr>
+                <th style="width:30px;position:sticky;left:0;z-index:var(--z-sticky-header);background:#fff !important;"><input type="checkbox" id="selectAllArticles"></th>
+                <th class="sticky-id sortable" data-sort="id" style="left:30px;">記事ID</th>
+                <th class="sticky-title sortable" data-sort="title">タイトル</th>
+                <th>URL</th>
+                <th>下書きURL</th>
+                <th class="sortable" data-sort="genre">ジャンル</th>
+                <th class="sortable" data-sort="category">記事カテゴリ</th>
+                <th class="sortable" data-sort="keyword">KW</th>
+                <th class="sortable" data-sort="status">ステータス</th>
+                <th class="sortable" data-sort="release_status">リリース</th>
+                <th class="sortable" data-sort="release_date">リリース日</th>
+                <th class="sortable" data-sort="no1_client">No.1クライアント</th>
+                <th>季節訴求</th>
+                <th>アンケート</th>
+                <th>アンケートURL</th>
+                <th>FIGMA</th>
+                <th>画像フォルダ</th>
+                <th>事前報告シート</th>
+                <th>禁止KW</th>
+                <th>レギュレーション</th>
+                <th>イントロ担当</th>
+                <th>イントロ納期</th>
+                <th>イントロ納品日</th>
+                <th>イントロ進捗</th>
+                <th>画像担当</th>
+                <th>画像納期</th>
+                <th>画像納品日</th>
+                <th>画像進捗</th>
+                <th>調査担当</th>
+                <th>調査納期</th>
+                <th>調査納品日</th>
+                <th>調査進捗</th>
+                <th>紹介文担当</th>
+                <th>紹介文納期</th>
+                <th>紹介文納品日</th>
+                <th>紹介文進捗</th>
+                <th>画像挿入担当</th>
+                <th>画像挿入納期</th>
+                <th>画像挿入納品日</th>
+                <th>画像挿入進捗</th>
+                <th>緊急</th>
+                <th>備考</th>
+                <th class="sortable" data-sort="_totalCost">合計金額</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="articleRows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section id="ordersTab" class="tab-panel stack hidden-panel">
+      <section class="kpi-grid" aria-label="発注指標">
+        <article class="card">
+          <p class="kpi-label">今月の発注合計</p>
+          <p id="currentMonthOrderAmount" class="kpi-value">¥0</p>
+          <p id="currentMonthOrderCount" class="kpi-sub">0件</p>
+          <p id="orderMom" class="kpi-sub">前月比 0%</p>
+        </article>
+        <article class="card">
+          <p class="kpi-label">先月の発注合計</p>
+          <p id="lastMonthOrderAmount" class="kpi-value">¥0</p>
+          <p id="lastMonthOrderCount" class="kpi-sub">0件</p>
+        </article>
+        <article class="card">
+          <p class="kpi-label">未支払い額</p>
+          <p id="unpaidAmount" class="kpi-value">¥0</p>
+          <p id="unpaidCount" class="kpi-sub">0件</p>
+        </article>
+      </section>
+
+      <section class="card">
+        <h2 class="card-title">発注フィルター</h2>
+        <form id="orderFilterForm" class="filter-grid">
+          <div class="form-field">
+            <label for="orderMonthFilter">月選択</label>
+            <select id="orderMonthFilter" name="month"></select>
+          </div>
+          <div class="form-field">
+            <label for="orderWorkerFilter">ワーカー選択</label>
+            <select id="orderWorkerFilter" name="worker"></select>
+          </div>
+          <div class="form-field">
+            <label for="orderStatusFilter">ステータス選択</label>
+            <select id="orderStatusFilter" name="status">
+              <option value="">全て</option>
+              <option value="発注済み">発注済み</option>
+              <option value="納品済み">納品済み</option>
+              <option value="支払済み">支払済み</option>
+            </select>
+          </div>
+          <div class="form-actions">
+            <button id="newOrderButton" class="btn-primary" type="button">+ 新規発注</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card table-card">
+        <div class="table-headline">
+          <h2 class="card-title">発注一覧</h2>
+          <div class="table-actions">
+            <button id="exportOrdersCsvButton" class="btn-secondary" type="button">月次CSVエクスポート</button>
+            <button id="refreshOrdersButton" class="btn-secondary" type="button">更新</button>
+          </div>
+        </div>
+        <div id="ordersEmptyState" class="empty-state hidden">発注がまだありません。</div>
+        <div class="table-wrap">
+          <table aria-label="発注一覧">
+            <thead>
+              <tr>
+                <th>タスク種別</th>
+                <th>発注日</th>
+                <th>記事タイトル</th>
+                <th>種類</th>
+                <th>ワーカー</th>
+                <th>金額</th>
+                <th>ステータス</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="orderRows"></tbody>
+          </table>
+        </div>
+        <div id="ordersTotal" class="table-total">合計 ¥0</div>
+      </section>
+
+      <section class="card table-card">
+        <div class="table-headline">
+          <h2 class="card-title">ワーカー別月次発注額</h2>
+          <div class="table-actions">
+            <select id="workerBillingYear"></select>
+          </div>
+        </div>
+        <div id="workerBillingEmpty" class="empty-state hidden">対象年の発注がありません。</div>
+        <div class="table-wrap" style="max-height:50vh;max-width:calc(100vw - 2rem);">
+          <table aria-label="ワーカー別月次発注額" style="min-width:2000px;">
+            <thead>
+              <tr id="workerBillingHead"></tr>
+            </thead>
+            <tbody id="workerBillingRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <section id="rewriteTab" class="tab-panel stack hidden-panel">
+      <section class="card table-card">
+        <div class="table-headline">
+          <h2 class="card-title">リライト管理</h2>
+        </div>
+        <div class="filter-grid" style="margin-bottom:12px;">
+          <div class="form-field">
+            <label for="rewriteStatusFilter">リライトステータス</label>
+            <select id="rewriteStatusFilter">
+              <option value="">全て</option>
+              <option value="リライト中" selected>リライト中</option>
+              <option value="リリース済">リリース済</option>
+              <option value="記事完了待ち">記事完了待ち</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table aria-label="リライト管理">
+            <thead>
+              <tr>
+                <th>記事ID</th>
+                <th>タイトル</th>
+                <th>KW</th>
+                <th>ステータス</th>
+                <th>リリース</th>
+                <th>リリース日</th>
+                <th>担当者</th>
+                <th>納期</th>
+                <th>進捗</th>
+                <th>備考</th>
+              </tr>
+            </thead>
+            <tbody id="rewriteRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <section id="workflowTab" class="tab-panel stack hidden-panel">
+      <section class="card table-card">
+        <div class="table-headline">
+          <h2 class="card-title">工程別ビュー</h2>
+        </div>
+        <div class="filter-grid" style="margin-bottom:12px;">
+          <div class="form-field">
+            <label for="workflowDeptFilter">工程</label>
+            <select id="workflowDeptFilter">
+              <option value="intro_writer">イントロ</option>
+              <option value="designer">画像デザイン</option>
+              <option value="researcher">情報収集</option>
+              <option value="clinic_writer">紹介文</option>
+              <option value="image_inserter">画像挿入</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="workflowProgressFilter">進捗</label>
+            <select id="workflowProgressFilter">
+              <option value="">全て</option>
+              <option value="未作成">未作成</option>
+              <option value="発注中">発注中</option>
+              <option value="修正依頼中">修正依頼中</option>
+              <option value="修正完了">修正完了</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table aria-label="工程別ビュー">
+            <thead>
+              <tr>
+                <th>記事ID</th>
+                <th>タイトル</th>
+                <th>担当者</th>
+                <th>納期</th>
+                <th>納品日</th>
+                <th>進捗</th>
+                <th>ステータス</th>
+                <th>金額</th>
+              </tr>
+            </thead>
+            <tbody id="workflowRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <section id="workersTab" class="tab-panel stack hidden-panel">
+      <section class="card table-card">
+        <div class="table-headline">
+          <h2 class="card-title">ライター一覧</h2>
+          <div class="table-actions">
+            <button id="newWorkerButton" class="btn-primary" type="button">+ 新規登録</button>
+            <button id="exportWorkersButton" class="btn-secondary" type="button">CSVエクスポート</button>
+            <button id="importWorkersButton" class="btn-secondary" type="button">CSVインポート</button>
+            <input id="workerCsvInput" class="hidden" type="file" accept=".csv,text/csv">
+            <button id="refreshWorkersButton" class="btn-secondary" type="button">更新</button>
+          </div>
+        </div>
+        <div class="worker-filter-bar" aria-label="ライターフィルター">
+          <div class="form-field">
+            <label for="workerRoleFilter">職種フィルター</label>
+            <select id="workerRoleFilter">
+              <option value="">全職種</option>
+              <option value="intro_writer">イントロライター</option>
+              <option value="designer">画像デザイナー</option>
+              <option value="researcher">医院情報収集</option>
+              <option value="clinic_writer">医院紹介文</option>
+              <option value="image_inserter">画像挿入者</option>
+              <option value="manager">マネージャー</option>
+              <option value="reviewer">検収者</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="workerActiveFilter">ステータスフィルター</label>
+            <select id="workerActiveFilter">
+              <option value="">全て</option>
+              <option value="true" selected>有効</option>
+              <option value="false">契約終了</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="workerNameSearch">名前検索</label>
+            <input id="workerNameSearch" type="search" autocomplete="off">
+          </div>
+          <div id="workerCountDisplay" class="worker-count">0 / 0 件</div>
+        </div>
+        <div id="workersEmptyState" class="empty-state hidden">ライターがまだありません。</div>
+        <div class="table-wrap">
+          <table aria-label="ライター一覧">
+            <thead>
+              <tr>
+                <th>名前</th>
+                <th>職種</th>
+                <th>メール</th>
+                <th>Chatwork</th>
+                <th>ステータス</th>
+                <th>累計発注額</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="workerRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <section id="auditTab" class="tab-panel stack hidden-panel">
+      <div class="audit-kpi-row">
+        <div class="audit-kpi-card">
+          <div class="kpi-value" id="auditKpiTotal">-</div>
+          <div class="kpi-label">全件</div>
+        </div>
+        <div class="audit-kpi-card">
+          <div class="kpi-value priority-critical" id="auditKpiCritical" style="background:none;">-</div>
+          <div class="kpi-label">最高</div>
+        </div>
+        <div class="audit-kpi-card">
+          <div class="kpi-value priority-high" id="auditKpiHigh" style="background:none;">-</div>
+          <div class="kpi-label">高</div>
+        </div>
+        <div class="audit-kpi-card">
+          <div class="kpi-value" id="auditKpiOpen">-</div>
+          <div class="kpi-label">未対応</div>
+        </div>
+      </div>
+      <section class="card table-card">
+        <div class="table-headline">
+          <h2 class="card-title">情報監査</h2>
+          <div class="table-actions">
+            <button id="refreshAuditButton" class="btn-secondary" type="button">更新</button>
+          </div>
+        </div>
+        <div class="worker-filter-bar" aria-label="監査フィルター">
+          <div class="form-field">
+            <label for="auditPriorityFilter">優先度</label>
+            <select id="auditPriorityFilter">
+              <option value="">全て</option>
+              <option value="最高">最高</option>
+              <option value="高">高</option>
+              <option value="中">中</option>
+              <option value="低">低</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="auditStatusFilter">ステータス</label>
+            <select id="auditStatusFilter">
+              <option value="">全て</option>
+              <option value="未対応" selected>未対応</option>
+              <option value="対応中">対応中</option>
+              <option value="完了">完了</option>
+              <option value="無視">無視</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="auditTypeFilter">種別</label>
+            <select id="auditTypeFilter">
+              <option value="">全て</option>
+              <option value="料金不一致">料金不一致</option>
+              <option value="終了キャンペーン残存">終了キャンペーン残存</option>
+              <option value="新キャンペーン未掲載">新キャンペーン未掲載</option>
+              <option value="閉院情報未反映">閉院情報未反映</option>
+              <option value="比較表の陳腐化">比較表の陳腐化</option>
+              <option value="院数不一致">院数不一致</option>
+              <option value="新メニュー未掲載">新メニュー未掲載</option>
+              <option value="情報不足">情報不足</option>
+              <option value="その他">その他</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="auditSearchInput">検索</label>
+            <input id="auditSearchInput" type="search" autocomplete="off" placeholder="記事・クリニック・修正案">
+          </div>
+        </div>
+        <div id="auditEmptyState" class="empty-state hidden">監査データがありません。</div>
+        <div class="table-wrap">
+          <table aria-label="情報監査一覧">
+            <thead>
+              <tr>
+                <th style="width:60px;">優先度</th>
+                <th style="width:140px;">種別</th>
+                <th>記事</th>
+                <th>問題</th>
+                <th style="width:90px;">ステータス</th>
+                <th style="width:90px;">対応分類</th>
+                <th style="width:100px;">検出日</th>
+                <th style="width:70px;">操作</th>
+              </tr>
+            </thead>
+            <tbody id="auditRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <div id="categoryPickerModal" class="modal-overlay" role="dialog" aria-modal="true">
+    <section class="card modal-card" style="max-width:420px;">
+      <div class="modal-header">
+        <h2 class="modal-title">記事カテゴリを選択</h2>
+        <button id="closeCategoryPickerBtn" class="close-btn" type="button" aria-label="閉じる">×</button>
+      </div>
+      <div id="categoryPickerBody" style="display:flex;flex-direction:column;gap:12px;padding:8px 0;"></div>
+      <div style="padding:12px 0;text-align:right;">
+        <button id="saveCategoryPickerBtn" class="btn-primary" type="button">確定</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="auditDetailModal" class="modal-overlay" role="dialog" aria-modal="true">
+    <section class="card modal-card" style="max-width:760px;">
+      <div class="modal-header">
+        <h2 class="modal-title">監査詳細</h2>
+        <button id="closeAuditDetailBtn" class="close-btn" type="button" aria-label="閉じる">×</button>
+      </div>
+      <div id="auditDetailBody" style="display:grid;gap:12px;padding:8px 0;font-size:14px;"></div>
+      <div class="audit-response-grid">
+        <div class="form-field">
+          <label for="auditDetailStatusSelect">ステータス</label>
+          <select id="auditDetailStatusSelect">
+            <option value="未対応">未対応</option>
+            <option value="対応中">対応中</option>
+            <option value="完了">完了</option>
+            <option value="無視">無視</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="auditResolutionTypeSelect">対応分類</label>
+          <select id="auditResolutionTypeSelect">
+            <option value="未判断">未判断</option>
+            <option value="記事修正">記事修正</option>
+            <option value="指摘誤り">指摘誤り</option>
+            <option value="対応不要">対応不要</option>
+            <option value="保留">保留</option>
+          </select>
+        </div>
+        <div class="form-field full">
+          <label for="auditResolutionPlanInput">対応方法</label>
+          <textarea id="auditResolutionPlanInput" placeholder="どこをどう確認・修正するか"></textarea>
+        </div>
+        <div class="form-field full">
+          <label for="auditResolutionResultInput">実際の対応内容</label>
+          <textarea id="auditResolutionResultInput" placeholder="実際に修正した内容・見送った判断"></textarea>
+        </div>
+        <div class="form-field full">
+          <label for="auditResolutionMemoInput">メモ</label>
+          <textarea id="auditResolutionMemoInput" placeholder="指摘が誤りだった理由、例外判断、次回の注意点"></textarea>
+        </div>
+      </div>
+      <div style="padding:12px 0;display:flex;gap:8px;justify-content:flex-end;">
+        <button id="auditDetailSaveBtn" class="btn-primary" type="button">対応内容を保存</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="createModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="createModalTitle">
+    <section class="card modal-card">
+      <div class="modal-header">
+        <h2 id="createModalTitle" class="modal-title">新規記事</h2>
+        <button id="closeCreateModalButton" class="close-btn" type="button" aria-label="閉じる">×</button>
+      </div>
+      <form id="createForm" class="form-grid">
+        <div class="form-field">
+          <label for="createTitle">タイトル</label>
+          <input id="createTitle" name="title" type="text" autocomplete="off" required>
+        </div>
+        <div class="form-field">
+          <label for="createUrl">URL</label>
+          <input id="createUrl" name="url" type="url" autocomplete="off" placeholder="https://example.com/article">
+        </div>
+        <div class="form-field">
+          <label for="createDraftUrl">下書きURL</label>
+          <input id="createDraftUrl" name="draft_url" type="url" autocomplete="off" placeholder="https://...">
+        </div>
+        <div class="form-field">
+          <label for="createKeyword">キーワード</label>
+          <input id="createKeyword" name="keyword" type="text" autocomplete="off">
+        </div>
+        <div class="form-field">
+          <label for="createGenreSelect">施術ジャンル</label>
+          <select id="createGenreSelect" name="genre"><option value="">-- 選択 --</option></select>
+        </div>
+        <div class="form-field full">
+          <label>記事カテゴリ（複数選択可）</label>
+          <div id="createCategoryCheckboxes" class="checkbox-grid"></div>
+        </div>
+        <div class="form-field">
+          <label for="createStatus">ステータス</label>
+          <select id="createStatus" name="status">
+            <option value="公開中">公開中</option>
+            <option value="執筆中">執筆中</option>
+            <option value="下書き">下書き</option>
+            <option value="公開停止中">公開停止中</option>
+            <option value="作成中止">作成中止</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="createNo1Client">No.1クライアント</label>
+          <select id="createNo1Client" name="no1_client">
+            <option value="">-- 選択 --</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="createReleaseDate">リリース日</label>
+          <input id="createReleaseDate" name="release_date" type="date">
+        </div>
+        <div class="form-field">
+          <label for="createReleaseStatus">リリースステータス</label>
+          <select id="createReleaseStatus" name="release_status">
+            <option value="記事完了待ち">記事完了待ち</option>
+            <option value="リリース可能">リリース可能</option>
+            <option value="リリース済">リリース済</option>
+            <option value="リライト中">リライト中</option>
+            <option value="保留">保留</option>
+          </select>
+        </div>
+        <div class="form-field full">
+          <label>不要な工程</label>
+          <div class="checkbox-grid skip-workflows-checkboxes"></div>
+        </div>
+        <div class="form-field">
+          <label for="createSeasonalAppeal">季節訴求</label>
+          <select id="createSeasonalAppeal" name="seasonal_appeal">
+            <option value="なし">なし</option>
+            <option value="あり">あり</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="createFigmaUrl">FIGMA URL</label>
+          <input id="createFigmaUrl" name="figma_url" type="url" placeholder="https://...">
+        </div>
+        <div class="form-field">
+          <label for="createImageFolderUrl">画像フォルダURL</label>
+          <input id="createImageFolderUrl" name="image_folder_url" type="url" placeholder="https://...">
+        </div>
+        <div class="form-field">
+          <label for="createSurveyStatus">アンケート準備</label>
+          <select id="createSurveyStatus" name="survey_status">
+            <option value="未完了">未完了</option>
+            <option value="完了">完了</option>
+            <option value="不要">不要</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="createSurveyUrl">アンケートURL</label>
+          <input id="createSurveyUrl" name="survey_url" type="url" placeholder="https://...">
+        </div>
+        <div class="form-field">
+          <label for="createPreReportUrl">事前報告シートURL</label>
+          <input id="createPreReportUrl" name="pre_report_url" type="url" placeholder="https://...">
+        </div>
+        <div class="form-field">
+          <label for="createBannedKeywords">禁止キーワード</label>
+          <input id="createBannedKeywords" name="banned_keywords" type="text" autocomplete="off">
+        </div>
+        <div class="form-field full">
+          <label for="createUrgentNotice">緊急伝達事項</label>
+          <input id="createUrgentNotice" name="urgent_notice" type="text" autocomplete="off">
+        </div>
+        <div class="form-field full">
+          <label for="createRegulation">レギュレーション</label>
+          <textarea id="createRegulation" name="regulation" rows="2"></textarea>
+        </div>
+        <div class="form-field full">
+          <label for="createMemo">メモ</label>
+          <textarea id="createMemo" name="memo"></textarea>
+        </div>
+        <div class="form-actions">
+          <button id="createButton" class="btn-primary" type="submit">追加</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div id="editModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
+    <section class="card modal-card">
+      <div class="modal-header">
+        <h2 id="editModalTitle" class="modal-title">記事を編集</h2>
+        <button id="closeModalButton" class="close-btn" type="button" aria-label="閉じる">×</button>
+      </div>
+      <form id="editForm" class="form-grid">
+        <input id="editId" type="hidden">
+        <div class="form-field full">
+          <label for="editTitle">タイトル</label>
+          <input id="editTitle" name="title" type="text" autocomplete="off" required>
+        </div>
+        <div class="form-field full">
+          <label for="editUrl">URL</label>
+          <input id="editUrl" name="url" type="url" autocomplete="off">
+        </div>
+        <div class="form-field full">
+          <label for="editDraftUrl">下書きURL</label>
+          <input id="editDraftUrl" name="draft_url" type="url" autocomplete="off" placeholder="https://...">
+        </div>
+        <div class="form-field">
+          <label for="editKeyword">キーワード</label>
+          <input id="editKeyword" name="keyword" type="text" autocomplete="off">
+        </div>
+        <div class="form-field">
+          <label for="editGenreSelect">施術ジャンル</label>
+          <select id="editGenreSelect" name="genre"><option value="">-- 選択 --</option></select>
+        </div>
+        <div class="form-field full">
+          <label>記事カテゴリ（複数選択可）</label>
+          <div id="editCategoryCheckboxes" class="checkbox-grid"></div>
+        </div>
+        <div class="form-field">
+          <label for="editCategory">記事カテゴリ</label>
+          <select id="editCategory" name="category"><option value="">-- 選択 --</option></select>
+        </div>
+        <div class="form-field">
+          <label for="editStatus">ステータス</label>
+          <select id="editStatus" name="status">
+            <option value="公開中">公開中</option>
+            <option value="執筆中">執筆中</option>
+            <option value="下書き">下書き</option>
+            <option value="公開停止中">公開停止中</option>
+            <option value="作成中止">作成中止</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="editNo1Client">No.1クライアント</label>
+          <select id="editNo1Client" name="no1_client">
+            <option value="">-- 選択 --</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="editReleaseDate">リリース日</label>
+          <input id="editReleaseDate" name="release_date" type="date">
+        </div>
+        <div class="form-field">
+          <label for="editReleaseStatus">リリースステータス</label>
+          <select id="editReleaseStatus" name="release_status">
+            <option value="記事完了待ち">記事完了待ち</option>
+            <option value="リリース可能">リリース可能</option>
+            <option value="リリース済">リリース済</option>
+            <option value="リライト中">リライト中</option>
+            <option value="保留">保留</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="editSeasonalAppeal">季節訴求</label>
+          <select id="editSeasonalAppeal" name="seasonal_appeal">
+            <option value="なし">なし</option>
+            <option value="あり">あり</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="editFigmaUrl">FIGMA URL</label>
+          <input id="editFigmaUrl" name="figma_url" type="url" placeholder="https://...">
+        </div>
+        <div class="form-field">
+          <label for="editImageFolderUrl">画像フォルダURL</label>
+          <input id="editImageFolderUrl" name="image_folder_url" type="url" placeholder="https://...">
+        </div>
+        <div class="form-field">
+          <label for="editSurveyStatus">アンケート準備</label>
+          <select id="editSurveyStatus" name="survey_status">
+            <option value="未完了">未完了</option>
+            <option value="完了">完了</option>
+            <option value="不要">不要</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="editSurveyUrl">アンケートURL</label>
+          <input id="editSurveyUrl" name="survey_url" type="url" placeholder="https://...">
+        </div>
+        <div class="form-field">
+          <label for="editPreReportUrl">事前報告シートURL</label>
+          <input id="editPreReportUrl" name="pre_report_url" type="url" placeholder="https://...">
+        </div>
+        <div class="form-field">
+          <label for="editBannedKeywords">禁止キーワード</label>
+          <input id="editBannedKeywords" name="banned_keywords" type="text" autocomplete="off">
+        </div>
+        <div class="form-field full">
+          <label for="editUrgentNotice">緊急伝達事項</label>
+          <input id="editUrgentNotice" name="urgent_notice" type="text" autocomplete="off">
+        </div>
+        <div class="form-field full">
+          <label for="editRegulation">レギュレーション</label>
+          <textarea id="editRegulation" name="regulation" rows="2"></textarea>
+        </div>
+        <div class="form-field full">
+          <label for="editMemo">メモ</label>
+          <textarea id="editMemo" name="memo"></textarea>
+        </div>
+
+        <div class="form-actions">
+                    <button id="saveEditButton" class="btn-primary" type="submit">保存</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div id="orderModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="orderModalTitle">
+    <section class="card modal-card">
+      <div class="modal-header">
+        <h2 id="orderModalTitle" class="modal-title">新規発注</h2>
+        <button id="closeOrderModalButton" class="close-btn" type="button" aria-label="閉じる">×</button>
+      </div>
+      <form id="orderForm" class="form-grid">
+        <input id="orderId" type="hidden">
+        <div class="form-field full">
+          <label>タスク種別</label>
+          <div class="checkbox-grid">
+            <label><input type="radio" name="task_category" value="作成依頼" checked style="width:auto;"> 作成依頼</label>
+            <label><input type="radio" name="task_category" value="検収" style="width:auto;"> 検収</label>
+          </div>
+        </div>
+        <!-- 1. 記事 -->
+        <div class="form-field full">
+          <label for="orderArticle">記事</label>
+          <input id="orderArticleSearch" type="text" placeholder="記事を検索..." autocomplete="off">
+          <select id="orderArticle" name="article_id"></select>
+        </div>
+        <!-- 記事URL（自動表示・読み取り専用） -->
+        <div id="orderArticleUrls" class="form-field full" style="display:none;">
+          <div style="display:flex;gap:16px;font-size:13px;">
+            <span>記事URL: <a id="orderAutoUrl" href="#" target="_blank" rel="noopener noreferrer" style="color:var(--primary);">-</a></span>
+            <span>下書き: <a id="orderAutoDraftUrl" href="#" target="_blank" rel="noopener noreferrer" style="color:var(--primary);">-</a></span>
+          </div>
+        </div>
+        <!-- 2. 種類（先に選択→部門・ワーカーが連動） -->
+        <div class="form-field">
+          <label for="orderType">種類</label>
+          <select id="orderType" name="order_type">
+            <option value="イントロ執筆">イントロ執筆</option>
+            <option value="画像デザイン">画像デザイン</option>
+            <option value="医院情報収集">医院情報収集</option>
+            <option value="医院紹介文">医院紹介文</option>
+            <option value="リライト">リライト</option>
+            <option value="その他">その他</option>
+          </select>
+        </div>
+        <div id="parentOrderField" class="form-field hidden">
+          <label for="parentOrderSelect">検収対象のリライト作成依頼</label>
+          <select id="parentOrderSelect" name="parent_order_id"></select>
+        </div>
+        <!-- 3. 部門（種類から自動セット、リライト/その他のみ手動） -->
+        <div id="orderDepartmentField" class="form-field">
+          <label for="orderDepartment">部門</label>
+          <select id="orderDepartment" name="department">
+            <option value="intro_writer">イントロライター</option>
+            <option value="designer">画像デザイナー</option>
+            <option value="researcher">医院情報収集</option>
+            <option value="clinic_writer">医院紹介文</option>
+            <option value="image_inserter">画像挿入者</option>
+          </select>
+        </div>
+        <!-- 4. ワーカー -->
+        <div class="form-field">
+          <label id="orderWorkerLabel" for="orderWorker">ワーカー</label>
+          <select id="orderWorker" name="worker_id" required></select>
+        </div>
+        <div class="form-field">
+          <label for="orderAmount">金額</label>
+          <input id="orderAmount" name="amount" type="number" min="0" step="1" required>
+        </div>
+        <!-- 5. 日付 -->
+        <div class="form-field">
+          <label for="orderedAt">発注日</label>
+          <input id="orderedAt" name="ordered_at" type="datetime-local" required>
+        </div>
+        <div class="form-field">
+          <label for="orderDeadline">納期</label>
+          <input id="orderDeadline" name="deadline" type="datetime-local">
+        </div>
+        <!-- 6. 進捗 -->
+        <div class="form-field">
+          <label for="orderProgress">進捗</label>
+          <select id="orderProgress" name="progress"></select>
+        </div>
+        <!-- 8. ステータス（編集時） -->
+        <div id="orderStatusField" class="form-field hidden">
+          <label for="orderStatus">ステータス</label>
+          <select id="orderStatus" name="status">
+            <option value="発注済み">発注済み</option>
+            <option value="納品済み">納品済み</option>
+            <option value="支払済み">支払済み</option>
+          </select>
+        </div>
+        <div id="deliveredAtField" class="form-field hidden">
+          <label for="deliveredAt">納品日</label>
+          <input id="deliveredAt" name="delivered_at" type="date">
+        </div>
+        <div id="paidAtField" class="form-field hidden">
+          <label for="paidAt">支払日</label>
+          <input id="paidAt" name="paid_at" type="date">
+        </div>
+        <!-- 9. メモ -->
+        <div class="form-field full">
+          <label for="orderNotes">メモ</label>
+          <textarea id="orderNotes" name="notes"></textarea>
+        </div>
+        <div class="form-actions">
+                    <button id="saveOrderButton" class="btn-primary" type="submit">保存</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div id="workerModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="workerModalTitle">
+    <section class="card modal-card">
+      <div class="modal-header">
+        <h2 id="workerModalTitle" class="modal-title">ライターを登録</h2>
+        <button id="closeWorkerModalButton" class="close-btn" type="button" aria-label="閉じる">×</button>
+      </div>
+      <form id="workerEditForm" class="form-grid">
+        <input id="workerEditId" type="hidden">
+        <div class="form-field">
+          <label for="workerEditName">名前</label>
+          <input id="workerEditName" name="name" type="text" autocomplete="off" required>
+        </div>
+        <input id="workerEditRole" name="role" type="hidden" value="intro_writer">
+        <div class="form-field">
+          <label for="workerEditEmail">メール</label>
+          <input id="workerEditEmail" name="email" type="email" autocomplete="off">
+        </div>
+        <div class="form-field full">
+          <label>職種（複数選択可）</label>
+          <div id="workerRoleCheckboxes" class="checkbox-grid"></div>
+          <input id="workerEditRoleExtra" name="role_extra" type="text" autocomplete="off" placeholder="その他の職種（自由入力）" style="margin-top:4px;">
+        </div>
+        <div class="form-field">
+          <label>検収者</label>
+          <label style="display:flex;align-items:center;gap:6px;font-weight:normal;">
+            <input id="workerEditIsReviewer" name="is_reviewer" type="checkbox"> 検収者として登録
+          </label>
+        </div>
+        <div class="form-field">
+          <label for="workerEditChatworkLink">Chatworkリンク</label>
+          <input id="workerEditChatworkLink" name="chatwork_link" type="url" autocomplete="off" placeholder="https://www.chatwork.com/">
+        </div>
+        <div class="form-field">
+          <label for="workerEditActive">ステータス</label>
+          <input id="workerEditActive" name="active" type="hidden" value="true">
+          <button id="workerActiveToggle" class="btn-secondary toggle-button active" type="button" aria-pressed="true">有効</button>
+        </div>
+        <div class="form-field full">
+          <label for="workerEditNotes">メモ</label>
+          <textarea id="workerEditNotes" name="notes"></textarea>
+        </div>
+        <div class="form-actions">
+                    <button id="saveWorkerButton" class="btn-primary" type="submit">保存</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'PLACEHOLDER_SUPABASE_URL';
+    const SUPABASE_KEY = 'PLACEHOLDER_SUPABASE_KEY';
+    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const AUTH_BYPASS = false;
+
+    /*
+      Reviewer roles:
+      workers.role = 'manager' can review all workflows.
+      workers.role = 'reviewer' can review as 検収者.
+    */
+
+    const tabHashes = {
+      articles: '#articles',
+      orders: '#orders',
+      rewrite: '#rewrite',
+      workflow: '#workflow',
+      workers: '#workers',
+      audit: '#audit'
+    };
+
+    const state = {
+      session: null,
+      activeTab: 'articles',
+      articles: [],
+      workers: [],
+      orders: [],
+      kpiOrders: [],
+      categories: [],
+      articleCategories: [],
+      articlePage: 0,
+      articleSortKey: 'id',
+      articleSortAsc: true,
+      clients: [],
+      audits: [],
+      auditsLoaded: false
+    };
+
+    const els = {
+      loginView: document.getElementById('loginView'),
+      appView: document.getElementById('appView'),
+      loginButton: document.getElementById('loginButton'),
+      signOutButton: document.getElementById('signOutButton'),
+      tabButtons: Array.from(document.querySelectorAll('.tab-button')),
+      articlesTab: document.getElementById('articlesTab'),
+      ordersTab: document.getElementById('ordersTab'),
+      workersTab: document.getElementById('workersTab'),
+      auditTab: document.getElementById('auditTab'),
+      refreshButton: document.getElementById('refreshButton'),
+      createForm: document.getElementById('createForm'),
+      createButton: document.getElementById('createButton'),
+      articleRows: document.getElementById('articleRows'),
+      articleLoadingOverlay: document.getElementById('articleLoadingOverlay'),
+      articleTableWrap: document.getElementById('articleTableWrap'),
+      emptyState: document.getElementById('emptyState'),
+      notice: document.getElementById('notice'),
+      totalCount: document.getElementById('totalCount'),
+      publishedCount: document.getElementById('publishedCount'),
+      writingCount: document.getElementById('writingCount'),
+      draftCount: document.getElementById('draftCount'),
+      todayCount: document.getElementById('todayCount'),
+      editModal: document.getElementById('editModal'),
+      editForm: document.getElementById('editForm'),
+      closeModalButton: document.getElementById('closeModalButton'),
+      saveEditButton: document.getElementById('saveEditButton'),
+      editId: document.getElementById('editId'),
+      editTitle: document.getElementById('editTitle'),
+      editUrl: document.getElementById('editUrl'),
+      editKeyword: document.getElementById('editKeyword'),
+      createCategoryCheckboxes: document.getElementById('createCategoryCheckboxes'),
+      editCategoryCheckboxes: document.getElementById('editCategoryCheckboxes'),
+      editStatus: document.getElementById('editStatus'),
+      editMemo: document.getElementById('editMemo'),
+      currentMonthOrderAmount: document.getElementById('currentMonthOrderAmount'),
+      currentMonthOrderCount: document.getElementById('currentMonthOrderCount'),
+      lastMonthOrderAmount: document.getElementById('lastMonthOrderAmount'),
+      lastMonthOrderCount: document.getElementById('lastMonthOrderCount'),
+      orderMom: document.getElementById('orderMom'),
+      unpaidAmount: document.getElementById('unpaidAmount'),
+      unpaidCount: document.getElementById('unpaidCount'),
+      orderFilterForm: document.getElementById('orderFilterForm'),
+      orderMonthFilter: document.getElementById('orderMonthFilter'),
+      orderWorkerFilter: document.getElementById('orderWorkerFilter'),
+      orderStatusFilter: document.getElementById('orderStatusFilter'),
+      newOrderButton: document.getElementById('newOrderButton'),
+      refreshOrdersButton: document.getElementById('refreshOrdersButton'),
+      orderRows: document.getElementById('orderRows'),
+      ordersEmptyState: document.getElementById('ordersEmptyState'),
+      ordersTotal: document.getElementById('ordersTotal'),
+      orderModal: document.getElementById('orderModal'),
+      orderModalTitle: document.getElementById('orderModalTitle'),
+      closeOrderModalButton: document.getElementById('closeOrderModalButton'),
+      orderForm: document.getElementById('orderForm'),
+      orderId: document.getElementById('orderId'),
+      orderTaskCategoryRadios: Array.from(document.querySelectorAll('input[name="task_category"]')),
+      orderArticle: document.getElementById('orderArticle'),
+      orderArticleSearch: document.getElementById('orderArticleSearch'),
+      orderWorker: document.getElementById('orderWorker'),
+      orderWorkerLabel: document.getElementById('orderWorkerLabel'),
+      orderType: document.getElementById('orderType'),
+      parentOrderField: document.getElementById('parentOrderField'),
+      parentOrderSelect: document.getElementById('parentOrderSelect'),
+      orderAmount: document.getElementById('orderAmount'),
+      orderedAt: document.getElementById('orderedAt'),
+      orderStatusField: document.getElementById('orderStatusField'),
+      orderStatus: document.getElementById('orderStatus'),
+      deliveredAtField: document.getElementById('deliveredAtField'),
+      deliveredAt: document.getElementById('deliveredAt'),
+      paidAtField: document.getElementById('paidAtField'),
+      paidAt: document.getElementById('paidAt'),
+      orderNotes: document.getElementById('orderNotes'),
+      orderDepartmentField: document.getElementById('orderDepartmentField'),
+      orderDepartment: document.getElementById('orderDepartment'),
+      orderProgress: document.getElementById('orderProgress'),
+      saveOrderButton: document.getElementById('saveOrderButton'),
+      newWorkerButton: document.getElementById('newWorkerButton'),
+      exportWorkersButton: document.getElementById('exportWorkersButton'),
+      importWorkersButton: document.getElementById('importWorkersButton'),
+      workerCsvInput: document.getElementById('workerCsvInput'),
+      workerRoleFilter: document.getElementById('workerRoleFilter'),
+      workerActiveFilter: document.getElementById('workerActiveFilter'),
+      workerNameSearch: document.getElementById('workerNameSearch'),
+      workerCountDisplay: document.getElementById('workerCountDisplay'),
+      refreshWorkersButton: document.getElementById('refreshWorkersButton'),
+      workerRows: document.getElementById('workerRows'),
+      workersEmptyState: document.getElementById('workersEmptyState'),
+      workerModal: document.getElementById('workerModal'),
+      workerModalTitle: document.getElementById('workerModalTitle'),
+      closeWorkerModalButton: document.getElementById('closeWorkerModalButton'),
+      workerEditForm: document.getElementById('workerEditForm'),
+      workerEditId: document.getElementById('workerEditId'),
+      workerEditName: document.getElementById('workerEditName'),
+      workerEditRole: document.getElementById('workerEditRole'),
+      workerEditEmail: document.getElementById('workerEditEmail'),
+      workerEditChatworkLink: document.getElementById('workerEditChatworkLink'),
+      workerEditActive: document.getElementById('workerEditActive'),
+      workerActiveToggle: document.getElementById('workerActiveToggle'),
+      workerEditNotes: document.getElementById('workerEditNotes'),
+      saveWorkerButton: document.getElementById('saveWorkerButton')
+    };
+
+    function clean(val) { return String(val ?? '').trim(); }
+
+    async function fetchAll(table) {
+      const all = [];
+      let from = 0;
+      const size = 1000;
+      while (true) {
+        const { data, error } = await db.from(table).select('*').range(from, from + size - 1);
+        if (error) return { data: null, error };
+        all.push(...(data || []));
+        if (!data || data.length < size) break;
+        from += size;
+      }
+      return { data: all, error: null };
+    }
+
+    function highlightText(text, query) {
+      const src = String(text ?? '');
+      const q = String(query ?? '').trim();
+      if (!q) return escapeHtml(src);
+      const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp(`(${escaped})`, 'gi');
+      return src.split(re).map(part =>
+        part.toLowerCase() === q.toLowerCase() ? `<mark>${escapeHtml(part)}</mark>` : escapeHtml(part)
+      ).join('');
+    }
+
+    function safeHref(url) {
+      const s = String(url || '').trim();
+      if (!s) return '';
+      try { const u = new URL(s); return (u.protocol === 'http:' || u.protocol === 'https:') ? s : ''; }
+      catch { return s.startsWith('http://') || s.startsWith('https://') ? s : ''; }
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function getCheckedCategories(container) {
+      return Array.from(container.querySelectorAll('input[type="checkbox"]:checked'))
+        .map(cb => cb.value);
+    }
+
+    function articlePayload(form) {
+      const data = new FormData(form);
+      const container = form.id === 'createForm'
+        ? els.createCategoryCheckboxes
+        : els.editCategoryCheckboxes;
+      const categories = getCheckedCategories(container);
+      return {
+        title: String(data.get('title') || '').trim(),
+        url: String(data.get('url') || '').trim(),
+        draft_url: String(data.get('draft_url') || '').trim() || null,
+        keyword: String(data.get('keyword') || '').trim(),
+        genre: String(data.get('genre') || '').trim() || null,
+        category: categories.join(',') || null,
+        skip_workflows: Array.from(form.closest('.modal-card, #articlesTab')?.querySelectorAll('.skip-workflows-checkboxes input:checked') || []).map(cb => cb.value).join(',') || null,
+        status: String(data.get('status') || '下書き').trim(),
+        no1_client: String(data.get('no1_client') || '').trim() || null,
+        release_date: String(data.get('release_date') || '').trim() || null,
+        release_status: String(data.get('release_status') || '記事完了待ち').trim(),
+        seasonal_appeal: String(data.get('seasonal_appeal') || 'なし').trim(),
+        figma_url: String(data.get('figma_url') || '').trim() || null,
+        image_folder_url: String(data.get('image_folder_url') || '').trim() || null,
+        survey_status: String(data.get('survey_status') || '未完了').trim(),
+        survey_url: String(data.get('survey_url') || '').trim() || null,
+        pre_report_url: String(data.get('pre_report_url') || '').trim() || null,
+        banned_keywords: String(data.get('banned_keywords') || '').trim() || null,
+        urgent_notice: String(data.get('urgent_notice') || '').trim() || null,
+        regulation: String(data.get('regulation') || '').trim() || null,
+        notes: String(data.get('memo') || '').trim(),
+      };
+    }
+
+    function workerPayload(form) {
+      const data = new FormData(form);
+      // チェックボックスから複数職種を取得
+      const checked = Array.from(document.querySelectorAll('#workerRoleCheckboxes input:checked')).map(cb => cb.value);
+      const extra = String(data.get('role_extra') || '').trim();
+      if (extra) checked.push(extra);
+      const roles = checked.length > 0 ? checked.join(',') : 'intro_writer';
+      return {
+        name: String(data.get('name') || '').trim(),
+        role: roles,
+        is_reviewer: document.getElementById('workerEditIsReviewer').checked,
+        email: String(data.get('email') || '').trim(),
+        chatwork_link: String(data.get('chatwork_link') || '').trim(),
+        review_specialty: String(data.get('review_specialty') || '').trim() || null,
+        active: String(data.get('active') || 'false') === 'true',
+        notes: String(data.get('notes') || '').trim(),
+      };
+    }
+
+    function orderPayload(form, includeEditFields) {
+      const data = new FormData(form);
+      const articleId = String(data.get('article_id') || '').trim();
+      const taskCategory = String(data.get('task_category') || '作成依頼').trim();
+      const orderType = String(data.get('order_type') || 'イントロ執筆').trim();
+      return {
+        task_category: taskCategory === '検収' ? '検収' : '作成依頼',
+        article_id: articleId ? Number(articleId) : null,
+        worker_id: String(data.get('worker_id') || '').trim(),
+        order_type: orderType,
+        amount: Number(data.get('amount') || 0),
+        ordered_at: String(data.get('ordered_at') || '').trim(),
+        deadline: String(data.get('deadline') || '').trim() || null,
+        delivered_at: includeEditFields ? (String(data.get('delivered_at') || '').trim() || null) : null,
+        paid_at: includeEditFields ? (String(data.get('paid_at') || '').trim() || null) : null,
+        status: includeEditFields ? String(data.get('status') || '発注済み').trim() : '発注済み',
+        notes: String(data.get('notes') || '').trim(),
+        department: taskCategory === '検収' ? null : (String(data.get('department') || '').trim() || null),
+        progress: String(data.get('progress') || '未作成').trim(),
+        parent_order_id: taskCategory === '検収' && orderType === 'リライト'
+          ? (String(data.get('parent_order_id') || '').trim() || null)
+          : null,
+        pre_report_url: clean(data.get('pre_report_url')) || null
+      };
+    }
+
+    function setButtonBusy(button, busy, text) {
+      if (!button) return;
+      if (busy) {
+        button.dataset.originalText = button.textContent;
+        button.textContent = text || '処理中...';
+        button.disabled = true;
+      } else {
+        button.textContent = button.dataset.originalText || button.textContent;
+        button.disabled = false;
+      }
+    }
+
+    function setBusy(busy) {
+      if (els.articleLoadingOverlay) {
+        els.articleLoadingOverlay.classList.toggle('visible', busy);
+        els.articleLoadingOverlay.setAttribute('aria-busy', String(busy));
+      }
+      if (els.articleTableWrap) {
+        els.articleTableWrap.classList.toggle('hidden', busy);
+      }
+      if (els.emptyState) {
+        els.emptyState.classList.toggle('hidden', busy || state.articles.length > 0);
+      }
+    }
+
+    function showNotice(message, type) {
+      if (!message) {
+        els.notice.style.display = 'none';
+        els.notice.textContent = '';
+        els.notice.classList.remove('error');
+        return;
+      }
+      els.notice.textContent = message;
+      els.notice.classList.toggle('error', type === 'error');
+      els.notice.style.display = 'block';
+    }
+
+    function normalizeStatus(status) {
+      if (['公開中','執筆中','下書き','公開停止中','作成中止'].includes(status)) return status;
+      return '下書き';
+    }
+
+    function statusClass(status) {
+      const normalized = normalizeStatus(status);
+      if (normalized === '公開中') return 'status-published';
+      if (normalized === '執筆中') return 'status-writing';
+      if (normalized === '公開停止中') return 'status-yellow';
+      if (normalized === '作成中止') return 'status-requested';
+      return 'status-draft';
+    }
+
+    function orderStatusClass(status) {
+      if (status === '支払済み') return 'status-published';
+      if (status === '納品済み') return 'status-writing';
+      return 'status-draft';
+    }
+
+    function workerRoleLabel(role) {
+      return {
+        intro_writer: 'イントロライター',
+        designer: '画像デザイナー',
+        researcher: '医院情報収集',
+        clinic_writer: '医院紹介文',
+        image_inserter: '画像挿入者',
+        manager: 'マネージャー',
+        reviewer: '検収者'
+      }[role] || '';
+    }
+
+    function normalizeWorkerRole(role) {
+      return workerRoleLabel(role) ? role : 'intro_writer';
+    }
+
+    function normalizeWorkerActive(value) {
+      if (value === false) return false;
+      const text = String(value ?? '').trim().toLowerCase();
+      if (['false', '0', 'no', 'n', '無効'].includes(text)) return false;
+      return true;
+    }
+
+    function formatYen(value) {
+      return `¥${Number(value || 0).toLocaleString()}`;
+    }
+
+    function formatMonth(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      return `${year}-${month}`;
+    }
+
+    function formatDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function formatDateTime(raw) {
+      if (!raw) return '';
+      const d = new Date(raw);
+      if (isNaN(d)) return escapeHtml(raw);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const h = String(d.getHours()).padStart(2, '0');
+      const min = String(d.getMinutes()).padStart(2, '0');
+      return `${y}/${m}/${day} ${h}:${min}`;
+    }
+
+    function monthBounds(monthValue) {
+      const [year, month] = String(monthValue || formatMonth(new Date())).split('-').map(Number);
+      const start = new Date(year, month - 1, 1);
+      const end = new Date(year, month, 1);
+      return {
+        start: formatDate(start),
+        end: formatDate(end)
+      };
+    }
+
+    function getArticleNotes(article) {
+      return article.notes ?? article.memo ?? '';
+    }
+
+    function articleName(id) {
+      if (!id) return 'なし';
+      return state.articles.find((item) => String(item.id) === String(id))?.title || 'なし';
+    }
+
+    function workerName(id) {
+      return state.workers.find((item) => String(item.id) === String(id))?.name || '';
+    }
+
+    function workerChatworkLink(id) {
+      return state.workers.find((item) => String(item.id) === String(id))?.chatwork_link || '';
+    }
+
+    function workerRoles(worker) {
+      return String(worker?.role || '').split(',').map(r => r.trim()).filter(Boolean);
+    }
+
+    function isReviewer(worker) {
+      const roles = workerRoles(worker);
+      return worker?.is_reviewer === true || roles.includes('manager') || roles.includes('reviewer');
+    }
+
+    function isReviewerForDept(worker, department) {
+      const roles = workerRoles(worker);
+      if (roles.includes('manager') || roles.includes('reviewer')) return true;
+      if (!worker?.is_reviewer) return false;
+      return roles.includes(department);
+    }
+
+    const DEPT_KEYS = ['intro_writer', 'designer', 'researcher', 'clinic_writer', 'image_inserter'];
+    const DEPT_SHORT = { intro_writer: 'イントロ', designer: '画像', researcher: '調査', clinic_writer: '紹介文', image_inserter: '画像挿入' };
+
+    function articleTotalCost(articleId) {
+      return state.kpiOrders
+        .filter(o => String(o.article_id) === String(articleId))
+        .reduce((sum, o) => sum + Number(o.amount || 0), 0);
+    }
+
+    function deptOrderInfo(articleId, dept) {
+      const orders = state.kpiOrders
+        .filter(o => String(o.article_id) === String(articleId) && o.department === dept)
+        .sort((a, b) => new Date(b.ordered_at || 0) - new Date(a.ordered_at || 0));
+      const order = orders[0];
+      if (!order) return { name: '', chatwork: '', deadline: '', progress: '', delivered_at: '', overdue: false, orderId: null };
+      const name = workerName(order.worker_id);
+      const chatwork = workerChatworkLink(order.worker_id);
+      const deadline = order.deadline || '';
+      const progress = order.progress || '';
+      const delivered_at = order.delivered_at || '';
+      const done = order.status === '納品済み' || order.status === '支払済み';
+      const overdue = !done && deadline && new Date(deadline) < new Date(new Date().toDateString());
+      return { name, chatwork, deadline, progress, delivered_at, overdue, orderId: order.id };
+    }
+
+    const MANUAL_RELEASE_STATUSES = ['保留', 'リリース済', 'リライト中'];
+
+    function computeReleaseStatus(article) {
+      if (MANUAL_RELEASE_STATUSES.includes(article.release_status)) return article.release_status;
+      const skips = String(article.skip_workflows || '').split(',').map(s => s.trim()).filter(Boolean);
+      const orders = state.kpiOrders
+        .filter(o => String(o.article_id) === String(article.id))
+        .filter(o => !skips.includes(o.department)); // スキップ工程を除外
+      if (orders.length === 0) return article.release_status || '記事完了待ち';
+      const allDone = orders.every(o => o.status === '納品済み' || o.status === '支払済み');
+      return allDone ? 'リリース可能' : '記事完了待ち';
+    }
+
+    async function updateReleaseStatus(articleId) {
+      const article = state.articles.find(a => String(a.id) === String(articleId));
+      if (!article || MANUAL_RELEASE_STATUSES.includes(article.release_status)) return;
+      const newStatus = computeReleaseStatus(article);
+      if (newStatus !== article.release_status) {
+        await db.from('articles').update({ release_status: newStatus }).eq('id', articleId);
+        article.release_status = newStatus;
+      }
+    }
+
+    const GENRE_COLORS = {
+      'インモード': { bg: '#dbeafe', color: '#1e40af' },
+      '脂肪吸引': { bg: '#fce7f3', color: '#9d174d' },
+      '医療脱毛': { bg: '#d1fae5', color: '#065f46' },
+      '二重整形': { bg: '#ede9fe', color: '#5b21b6' },
+      'シミ取り': { bg: '#fef3c7', color: '#92400e' },
+      'AGA': { bg: '#e0e7ff', color: '#3730a3' },
+      '美容皮膚科': { bg: '#fce4ec', color: '#880e4f' },
+      '美容外科': { bg: '#e8f5e9', color: '#1b5e20' },
+    };
+
+    function renderGenreBadges(genreStr) {
+      if (!genreStr) return '';
+      return genreStr.split(',').map(g => {
+        const name = g.trim();
+        if (!name) return '';
+        const c = GENRE_COLORS[name] || { bg: '#f1f5f9', color: '#475569' };
+        return `<span class="genre-badge" style="background:${c.bg};color:${c.color};">${escapeHtml(name)}</span>`;
+      }).join(' ');
+    }
+
+    const CATEGORY_COLORS = {
+      '口コミ（商標）': { bg: '#dbeafe', color: '#1e40af' },
+      '地域おすすめ': { bg: '#dcfce7', color: '#166534' },
+      'クーポン料金（商標）': { bg: '#fef3c7', color: '#92400e' },
+      '医院や店舗説明（商標）': { bg: '#ede9fe', color: '#5b21b6' },
+      '治療内容（非商標）': { bg: '#e0f2fe', color: '#0369a1' },
+      'ネガティブKW（商標）': { bg: '#fce4ec', color: '#880e4f' },
+      '地域安い': { bg: '#d1fae5', color: '#065f46' },
+    };
+
+    function renderCategoryBadges(catStr) {
+      if (!catStr) return '';
+      const items = catStr.split(',').map(c => c.trim()).filter(Boolean);
+      const visible = items.slice(0, 2);
+      const rest = items.length - 2;
+      let html = visible.map(name => {
+        const col = CATEGORY_COLORS[name] || { bg: '#f1f5f9', color: '#475569' };
+        return `<span class="genre-badge" style="background:${col.bg};color:${col.color};">${escapeHtml(name)}</span>`;
+      }).join(' ');
+      if (rest > 0) html += ` <span style="color:var(--muted);font-size:12px;">+${rest}</span>`;
+      return html;
+    }
+
+    const CLIENT_PALETTE = [
+      { bg: '#dbeafe', color: '#1e40af' }, { bg: '#dcfce7', color: '#166534' },
+      { bg: '#fce7f3', color: '#9d174d' }, { bg: '#ede9fe', color: '#5b21b6' },
+      { bg: '#fef3c7', color: '#92400e' }, { bg: '#e0f2fe', color: '#0369a1' },
+      { bg: '#d1fae5', color: '#065f46' }, { bg: '#e0e7ff', color: '#3730a3' },
+      { bg: '#fce4ec', color: '#880e4f' }, { bg: '#e8f5e9', color: '#1b5e20' },
+      { bg: '#fff3e0', color: '#e65100' }, { bg: '#f3e5f5', color: '#6a1b9a' },
+    ];
+
+    function clientBadge(name) {
+      if (!name) return '';
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) hash = ((hash << 5) - hash + name.charCodeAt(i)) | 0;
+      const c = CLIENT_PALETTE[Math.abs(hash) % CLIENT_PALETTE.length];
+      return `<span class="genre-badge" style="background:${c.bg};color:${c.color};">${escapeHtml(name)}</span>`;
+    }
+
+    function articleGenre(article) {
+      return article.article_genre || article.genre || article.category || '';
+    }
+
+    function isUpdatedToday(article) {
+      const rawDate = article.updated_at || article.created_at;
+      if (!rawDate) return false;
+      const date = new Date(rawDate);
+      if (Number.isNaN(date.getTime())) return false;
+      const now = new Date();
+      return date.getFullYear() === now.getFullYear()
+        && date.getMonth() === now.getMonth()
+        && date.getDate() === now.getDate();
+    }
+
+    function renderStats() {
+      const articles = state.articles;
+      els.totalCount.textContent = articles.length;
+      els.publishedCount.textContent = articles.filter((item) => normalizeStatus(item.status) === '公開中').length;
+      els.writingCount.textContent = articles.filter((item) => normalizeStatus(item.status) === '執筆中').length;
+      els.draftCount.textContent = articles.filter((item) => normalizeStatus(item.status) === '下書き').length;
+      els.todayCount.textContent = articles.filter(isUpdatedToday).length;
+    }
+
+    function filteredArticles() {
+      const q = (document.getElementById('articleSearchInput')?.value || '').trim().toLowerCase();
+      const statusF = document.getElementById('articleStatusFilter')?.value || '';
+      const genreF = document.getElementById('articleGenreFilter')?.value || '';
+      const releaseF = document.getElementById('articleReleaseFilter')?.value || '';
+      const catF = document.getElementById('articleCategoryFilter')?.value || '';
+      const filtered = state.articles.filter(a => {
+        if (q && !String(a.title || '').toLowerCase().includes(q) && !String(a.keyword || '').toLowerCase().includes(q)) return false;
+        if (statusF && normalizeStatus(a.status) !== statusF) return false;
+        if (genreF && !String(articleGenre(a)).includes(genreF)) return false;
+        if (releaseF && computeReleaseStatus(a) !== releaseF) return false;
+        if (catF && (a.category || '') !== catF) return false;
+        return true;
+      });
+      const key = state.articleSortKey;
+      const dir = state.articleSortAsc ? 1 : -1;
+      filtered.sort((a, b) => {
+        let va = key === 'id' ? Number(a[key] || 0) : key === '_totalCost' ? articleTotalCost(a.id) : String(a[key] || '').toLowerCase();
+        let vb = key === 'id' ? Number(b[key] || 0) : key === '_totalCost' ? articleTotalCost(b.id) : String(b[key] || '').toLowerCase();
+        if (va < vb) return -1 * dir;
+        if (va > vb) return 1 * dir;
+        return 0;
+      });
+      return filtered;
+    }
+
+    const ARTICLES_PER_PAGE = 1000;
+
+    function renderRows() {
+      els.articleRows.innerHTML = '';
+      const allRows = filteredArticles();
+      const totalPages = Math.ceil(allRows.length / ARTICLES_PER_PAGE);
+      if (state.articlePage >= totalPages) state.articlePage = Math.max(0, totalPages - 1);
+      const start = state.articlePage * ARTICLES_PER_PAGE;
+      const rows = allRows.slice(start, start + ARTICLES_PER_PAGE);
+
+      els.emptyState.classList.toggle('hidden', allRows.length > 0);
+      const countEl = document.getElementById('articleFilterCount');
+      if (countEl) {
+        const pageInfo = totalPages > 1 ? ` | ページ ${state.articlePage + 1}/${totalPages}` : '';
+        countEl.textContent = `${allRows.length} / ${state.articles.length} 件${pageInfo}`;
+      }
+      // ページネーションボタン
+      const pagerEl = document.getElementById('articlePager');
+      if (pagerEl) {
+        pagerEl.innerHTML = '';
+        if (totalPages > 1) {
+          for (let p = 0; p < totalPages; p++) {
+            const btn = document.createElement('button');
+            btn.textContent = `${p + 1}`;
+            btn.className = p === state.articlePage ? 'btn-primary' : 'btn-secondary';
+            btn.style.cssText = 'padding:4px 12px;font-size:13px;margin-right:4px;';
+            btn.addEventListener('click', () => { state.articlePage = p; renderRows(); });
+            pagerEl.appendChild(btn);
+          }
+        }
+      }
+
+      const searchQ = (document.getElementById('articleSearchInput')?.value || '').trim();
+
+      rows.forEach((article) => {
+        const tr = document.createElement('tr');
+        tr.className = 'article-row';
+        tr.dataset.id = article.id;
+        const title = searchQ ? highlightText(article.title || '無題', searchQ) : escapeHtml(article.title || '無題');
+        const url = String(article.url || '').trim();
+        const keyword = searchQ ? highlightText(article.keyword || '', searchQ) : escapeHtml(article.keyword || '');
+        const memo = escapeHtml(getArticleNotes(article));
+        const status = normalizeStatus(article.status);
+        const escapedUrl = escapeHtml(url);
+
+        const releaseStatus = computeReleaseStatus(article);
+        const releaseClass = releaseStatus === 'リリース可能' ? 'status-green'
+          : releaseStatus === 'リリース済' ? 'status-published'
+          : releaseStatus === 'リライト中' ? 'status-writing'
+          : releaseStatus === '保留' ? 'status-yellow' : 'status-gray';
+        const urgent = article.urgent_notice ? `<span style="color:#dc2626;font-weight:600;">⚠ ${escapeHtml(article.urgent_notice)}</span>` : '';
+        const surveyLabel = article.survey_status === '完了' ? '✓' : article.survey_status === '不要' ? '-' : '未';
+
+        tr.innerHTML = `
+          <td style="position:sticky;left:0;z-index:var(--z-sticky-col);background:#fff !important;"><input type="checkbox" class="article-select-cb" data-article-id="${article.id}"></td>
+          <td class="sticky-id" style="left:30px;">${escapeHtml(article.id)}</td>
+          <td data-field="title" class="title-cell sticky-title">${title}</td>
+          <td data-field="url" class="url-cell">${url ? `<a href="${escapeHtml(safeHref(url))}" target="_blank" rel="noopener noreferrer">${escapedUrl}</a>` : ''}</td>
+          <td data-field="draft_url" class="url-cell">${article.draft_url ? `<a href="${escapeHtml(safeHref(article.draft_url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(article.draft_url)}</a>` : ''}</td>
+          <td data-field="genre">${renderGenreBadges(articleGenre(article))}</td>
+          <td data-field="category" style="max-width:none;overflow:visible;white-space:nowrap;">${renderCategoryBadges(article.category || '')}</td>
+          <td data-field="keyword">${keyword}</td>
+          <td data-field="status"><span class="status-badge ${statusClass(status)}">${escapeHtml(status)}</span></td>
+          <td data-field="release_status"><span class="status-badge ${releaseClass}">${escapeHtml(releaseStatus)}</span></td>
+          <td data-field="release_date">${escapeHtml(article.release_date || '')}</td>
+          <td data-field="no1_client">${clientBadge(article.no1_client)}</td>
+          <td data-field="seasonal_appeal">${escapeHtml(article.seasonal_appeal || 'なし')}</td>
+          <td data-field="survey_status">${surveyLabel}</td>
+          <td data-field="survey_url" class="url-cell">${article.survey_url ? `<a href="${escapeHtml(safeHref(article.survey_url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(article.survey_url)}</a>` : ''}</td>
+          <td data-field="figma_url" class="url-cell">${article.figma_url ? `<a href="${escapeHtml(safeHref(article.figma_url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(article.figma_url)}</a>` : ''}</td>
+          <td data-field="image_folder_url" class="url-cell">${article.image_folder_url ? `<a href="${escapeHtml(safeHref(article.image_folder_url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(article.image_folder_url)}</a>` : ''}</td>
+          <td data-field="pre_report_url" class="url-cell">${article.pre_report_url ? `<a href="${escapeHtml(safeHref(article.pre_report_url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(article.pre_report_url)}</a>` : ''}</td>
+          <td data-field="banned_keywords">${escapeHtml(article.banned_keywords || '')}</td>
+          <td data-field="regulation" class="memo-cell">${escapeHtml(article.regulation || '')}</td>
+          ${DEPT_KEYS.map(dept => {
+            const info = deptOrderInfo(article.id, dept);
+            const deadlineCls = info.overdue ? ' style="color:#dc2626;font-weight:600;"' : '';
+            const oid = info.orderId || '';
+            const oa = `data-order-id="${oid}" data-article-id="${article.id}" data-dept="${dept}"`;
+            const nameHtml = info.chatwork
+              ? `<a href="${escapeHtml(safeHref(info.chatwork))}" target="_blank" rel="noopener noreferrer">${escapeHtml(info.name)}</a>`
+              : escapeHtml(info.name);
+            const overdueBg = info.overdue ? ' style="background:#fef2f2;"' : '';
+            return `<td ${oa} data-order-field="worker_name">${nameHtml}</td>` +
+              `<td ${oa} data-order-field="deadline"${overdueBg} style="white-space:nowrap;overflow:visible;max-width:none;${info.overdue ? 'color:#dc2626;font-weight:600;background:#fef2f2;' : ''}">${formatDateTime(info.deadline)}${info.overdue ? ' ⚠' : ''}</td>` +
+              `<td ${oa} data-order-field="delivered_at" style="white-space:nowrap;overflow:visible;max-width:none;">${formatDateTime(info.delivered_at)}</td>` +
+              `<td ${oa} data-order-field="progress"${overdueBg}>${escapeHtml(info.progress)}</td>`;
+          }).join('')}
+          <td data-field="urgent_notice">${urgent}</td>
+          <td data-field="notes" class="memo-cell">${memo}</td>
+          <td style="font-weight:700;white-space:nowrap;">${formatYen(articleTotalCost(article.id))}</td>
+          <td>
+            <div class="action-row">
+              <button class="edit-btn" type="button" data-action="edit" data-id="${escapeHtml(article.id)}">編集</button>
+              <button class="delete-btn" type="button" data-action="delete" data-id="${escapeHtml(article.id)}">削除</button>
+            </div>
+          </td>
+        `;
+        els.articleRows.appendChild(tr);
+      });
+    }
+
+    // --- CSV Export ---
+    function exportArticlesCsv() {
+      const rows = filteredArticles();
+      const headers = ['記事ID','タイトル','URL','下書きURL','KW','ジャンル','記事カテゴリ','ステータス','リリース','リリース日','No.1クライアント','季節訴求','禁止KW','アンケート','備考'];
+      const csvRows = [headers.join(',')];
+      rows.forEach(a => {
+        const cols = [a.id, a.title||'', a.url||'', a.draft_url||'', a.keyword||'', articleGenre(a), a.category||'', normalizeStatus(a.status), computeReleaseStatus(a), a.release_date||'', a.no1_client||'', a.seasonal_appeal||'', a.banned_keywords||'', a.survey_status||'', getArticleNotes(a)];
+        csvRows.push(cols.map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
+      });
+      const blob = new Blob(['\uFEFF' + csvRows.join('\n')], { type: 'text/csv;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `articles-${formatDate(new Date())}.csv`;
+      link.click();
+    }
+
+    // --- Bulk Delete ---
+    const selectedArticleIds = new Set();
+
+    function updateBulkDeleteBtn() {
+      const btn = document.getElementById('bulkDeleteBtn');
+      const selectAll = document.getElementById('selectAllArticles');
+      btn.style.display = selectedArticleIds.size > 0 ? '' : 'none';
+      btn.textContent = `${selectedArticleIds.size}件削除`;
+      const cbs = document.querySelectorAll('.article-select-cb');
+      const checkedCount = Array.from(cbs).filter(cb => cb.checked).length;
+      selectAll.checked = cbs.length > 0 && checkedCount === cbs.length;
+      selectAll.indeterminate = checkedCount > 0 && checkedCount < cbs.length;
+    }
+
+    async function bulkDeleteArticles() {
+      if (!selectedArticleIds.size) return;
+      if (!window.confirm(`${selectedArticleIds.size}件の記事を削除しますか？`)) return;
+      const ids = Array.from(selectedArticleIds);
+      await db.from('orders').delete().in('article_id', ids);
+      await db.from('articles').delete().in('id', ids);
+      selectedArticleIds.clear();
+      showNotice(`${ids.length}件の記事を削除しました。`);
+      await loadArticles();
+      await loadKpiOrders();
+    }
+
+    function render() {
+      renderStats();
+      renderRows();
+    }
+
+    function renderRewriteTab() {
+      const tbody = document.getElementById('rewriteRows');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      const filter = document.getElementById('rewriteStatusFilter')?.value || '';
+      const articles = state.articles.filter(a => {
+        const rs = computeReleaseStatus(a);
+        if (filter && rs !== filter) return false;
+        return rs === 'リライト中' || filter; // デフォルトはリライト中のみ
+      });
+      articles.forEach(a => {
+        // リライト工程の発注情報を取得
+        const rewriteOrders = state.kpiOrders
+          .filter(o => orderTaskCategory(o) === '作成依頼')
+          .filter(o => String(o.article_id) === String(a.id) && (o.department === 'rewrite' || o.order_type === 'リライト'))
+          .sort((x, y) => new Date(y.ordered_at || 0) - new Date(x.ordered_at || 0));
+        const order = rewriteOrders[0];
+        const name = order ? workerName(order.worker_id) : '';
+        const deadline = order?.deadline || '';
+        const progress = order?.progress || '';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${escapeHtml(a.id)}</td>
+          <td class="title-cell">${escapeHtml(a.title || '')}</td>
+          <td>${escapeHtml(a.keyword || '')}</td>
+          <td><span class="status-badge ${statusClass(a.status)}">${escapeHtml(normalizeStatus(a.status))}</span></td>
+          <td><span class="status-badge status-writing">${escapeHtml(computeReleaseStatus(a))}</span></td>
+          <td>${escapeHtml(a.release_date || '')}</td>
+          <td>${escapeHtml(name)}</td>
+          <td>${escapeHtml(deadline)}</td>
+          <td>${escapeHtml(progress)}</td>
+          <td class="memo-cell">${escapeHtml(getArticleNotes(a))}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderWorkerBilling() {
+      const yearSel = document.getElementById('workerBillingYear');
+      const tbody = document.getElementById('workerBillingRows');
+      const thead = document.getElementById('workerBillingHead');
+      const empty = document.getElementById('workerBillingEmpty');
+      if (!yearSel || !tbody) return;
+
+      // 年セレクト初期化
+      if (!yearSel.options.length) {
+        const curYear = new Date().getFullYear();
+        const years = new Set([curYear]);
+        state.kpiOrders.forEach(o => {
+          const d = new Date(o.ordered_at || '');
+          if (!isNaN(d)) years.add(d.getFullYear());
+        });
+        Array.from(years).sort((a, b) => b - a).forEach(y => {
+          const opt = document.createElement('option');
+          opt.value = y;
+          opt.textContent = `${y}年`;
+          yearSel.appendChild(opt);
+        });
+        yearSel.value = curYear;
+      }
+
+      const year = Number(yearSel.value);
+      const curMonth = new Date().getMonth(); // 0-based
+      // 月順: 先月→先々月→...（過去12ヶ月）
+      const monthOrder = [];
+      for (let i = 1; i <= 12; i++) {
+        monthOrder.push((curMonth - i + 12) % 12);
+      }
+
+      // ヘッダー更新
+      if (thead) {
+        thead.innerHTML = `<th style="position:sticky;left:0;z-index:3;background:#fff;">ワーカー名</th>`
+          + monthOrder.map(m => `<th>${m + 1}月</th>`).join('')
+          + `<th>合計</th>`;
+      }
+
+      const wMap = new Map(state.workers.map(w => [w.id, w]));
+      const billing = new Map();
+
+      state.kpiOrders.forEach(o => {
+        const d = new Date(o.ordered_at || '');
+        if (isNaN(d) || d.getFullYear() !== year) return;
+        const wid = o.worker_id;
+        if (!wid || !wMap.has(wid)) return;
+        if (!billing.has(wid)) billing.set(wid, { worker: wMap.get(wid), months: Array(12).fill(0), total: 0 });
+        const r = billing.get(wid);
+        const amt = Number(o.amount || 0);
+        r.months[d.getMonth()] += amt;
+        r.total += amt;
+      });
+
+      const rows = Array.from(billing.values()).sort((a, b) => b.total - a.total);
+      tbody.innerHTML = '';
+      if (empty) empty.classList.toggle('hidden', rows.length > 0);
+
+      rows.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td style="position:sticky;left:0;z-index:2;background:#fff !important;font-weight:600;white-space:nowrap;">${escapeHtml(r.worker.name)}</td>`
+          + monthOrder.map(m => `<td>${r.months[m] ? formatYen(r.months[m]) : ''}</td>`).join('')
+          + `<td style="font-weight:700;">${formatYen(r.total)}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderWorkflowTab() {
+      const tbody = document.getElementById('workflowRows');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      const dept = document.getElementById('workflowDeptFilter')?.value || 'intro_writer';
+      const progressF = document.getElementById('workflowProgressFilter')?.value || '';
+      const orders = state.kpiOrders
+        .filter(o => o.department === dept)
+        .filter(o => !progressF || o.progress === progressF)
+        .sort((a, b) => new Date(b.ordered_at || 0) - new Date(a.ordered_at || 0));
+      orders.forEach(o => {
+        const article = state.articles.find(a => String(a.id) === String(o.article_id));
+        const overdue = o.status !== '納品済み' && o.status !== '支払済み' && o.deadline && new Date(o.deadline) < new Date(new Date().toDateString());
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${escapeHtml(o.article_id || '')}</td>
+          <td class="title-cell">${escapeHtml(article?.title || '(記事なし)')}</td>
+          <td>${escapeHtml(workerName(o.worker_id))}</td>
+          <td${overdue ? ' style="background:#fef2f2;color:#dc2626;font-weight:600;"' : ''}>${escapeHtml(o.deadline || '')}${overdue ? ' ⚠' : ''}</td>
+          <td>${escapeHtml(o.delivered_at || '')}</td>
+          <td>${escapeHtml(o.progress || '')}</td>
+          <td><span class="status-badge ${orderStatusClass(o.status || '発注済み')}">${escapeHtml(o.status || '発注済み')}</span></td>
+          <td>${formatYen(o.amount)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // --- インライン編集 ---
+    const INLINE_SELECT_FIELDS = {
+      status: ['公開中', '執筆中', '下書き', '公開停止中', '作成中止'],
+      release_status: ['記事完了待ち', 'リリース可能', 'リリース済', 'リライト中', '保留'],
+      seasonal_appeal: ['なし', 'あり'],
+      survey_status: ['未完了', '完了', '不要']
+    };
+    const INLINE_DATE_FIELDS = ['release_date'];
+    const INLINE_SKIP_FIELDS = [];
+
+    let _categoryPickerArticle = null;
+
+    function openCategoryPickerModal(article) {
+      _categoryPickerArticle = article;
+      const body = document.getElementById('categoryPickerBody');
+      body.innerHTML = '';
+      const currentCats = String(article.category || '').split(',').map(s => s.trim()).filter(Boolean);
+      state.articleCategories.forEach(ac => {
+        const col = CATEGORY_COLORS[ac.name] || { bg: '#f1f5f9', color: '#475569' };
+        const label = document.createElement('label');
+        label.style.cssText = `display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;transition:background 0.1s;`;
+        label.addEventListener('mouseenter', () => label.style.background = '#f8fafc');
+        label.addEventListener('mouseleave', () => label.style.background = '');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = ac.name;
+        cb.style.cssText = 'width:18px;height:18px;cursor:pointer;';
+        if (currentCats.includes(ac.name)) cb.checked = true;
+        const badge = document.createElement('span');
+        badge.className = 'genre-badge';
+        badge.style.cssText = `background:${col.bg};color:${col.color};font-size:13px;padding:4px 12px;`;
+        badge.textContent = ac.name;
+        label.appendChild(cb);
+        label.appendChild(badge);
+        body.appendChild(label);
+      });
+      document.getElementById('categoryPickerModal').classList.add('open');
+    }
+
+    function closeCategoryPickerModal() {
+      document.getElementById('categoryPickerModal').classList.remove('open');
+      _categoryPickerArticle = null;
+    }
+
+    async function saveCategoryPicker() {
+      if (!_categoryPickerArticle) return;
+      const body = document.getElementById('categoryPickerBody');
+      const checked = Array.from(body.querySelectorAll('input:checked')).map(cb => cb.value);
+      const newValue = checked.join(',');
+      const { error } = await db.from('articles').update({ category: newValue || null }).eq('id', _categoryPickerArticle.id);
+      if (error) { showNotice(`保存失敗: ${error.message}`, 'error'); }
+      else { _categoryPickerArticle.category = newValue || null; }
+      closeCategoryPickerModal();
+      renderRows();
+    }
+
+    function startInlineEdit(td) {
+      if (td.querySelector('.inline-edit')) return; // 既に編集中
+      const field = td.dataset.field;
+      if (!field || INLINE_SKIP_FIELDS.includes(field)) return;
+
+      const tr = td.closest('tr');
+      const articleId = tr?.dataset.id;
+      const article = state.articles.find(a => String(a.id) === String(articleId));
+      if (!article) return;
+
+      const currentValue = article[field] ?? '';
+      let input;
+
+      if (field === 'category') {
+        openCategoryPickerModal(article);
+        return;
+      } else if (field === 'no1_client') {
+        input = document.createElement('select');
+        input.className = 'inline-edit';
+        const emptyOpt = document.createElement('option');
+        emptyOpt.value = '';
+        emptyOpt.textContent = '--';
+        input.appendChild(emptyOpt);
+        state.clients.forEach(cli => {
+          const o = document.createElement('option');
+          o.value = cli.name;
+          o.textContent = cli.name;
+          if (cli.name === currentValue) o.selected = true;
+          input.appendChild(o);
+        });
+      } else if (field === 'genre') {
+        input = document.createElement('select');
+        input.className = 'inline-edit';
+        const emptyOpt = document.createElement('option');
+        emptyOpt.value = '';
+        emptyOpt.textContent = '--';
+        input.appendChild(emptyOpt);
+        state.categories.forEach(cat => {
+          const o = document.createElement('option');
+          o.value = cat.name;
+          o.textContent = cat.name;
+          if (cat.name === currentValue) o.selected = true;
+          input.appendChild(o);
+        });
+      } else if (INLINE_SELECT_FIELDS[field]) {
+        input = document.createElement('select');
+        input.className = 'inline-edit';
+        INLINE_SELECT_FIELDS[field].forEach(opt => {
+          const o = document.createElement('option');
+          o.value = opt;
+          o.textContent = opt;
+          if (opt === currentValue) o.selected = true;
+          input.appendChild(o);
+        });
+      } else if (INLINE_DATE_FIELDS.includes(field)) {
+        input = document.createElement('input');
+        input.type = 'date';
+        input.className = 'inline-edit';
+        input.value = currentValue;
+      } else {
+        input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'inline-edit';
+        input.value = currentValue;
+      }
+
+      const origHtml = td.innerHTML;
+      td.innerHTML = '';
+      td.appendChild(input);
+      input.focus();
+      if (input.select) input.select();
+
+      async function save() {
+        const newValue = input.value.trim();
+        if (newValue === String(currentValue || '')) {
+          td.innerHTML = origHtml;
+          return;
+        }
+        const payload = { [field]: newValue || null };
+        const { error } = await db.from('articles').update(payload).eq('id', articleId);
+        if (error) {
+          showNotice(`保存失敗: ${error.message}`, 'error');
+          td.innerHTML = origHtml;
+          return;
+        }
+        article[field] = newValue || null;
+        renderRows();
+      }
+
+      input.addEventListener('blur', save);
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+        if (e.key === 'Escape') { td.innerHTML = origHtml; }
+      });
+      if (input.tagName === 'SELECT') {
+        input.addEventListener('change', () => input.blur());
+      }
+    }
+
+    const BASE_PROGRESS_OPTIONS = ['依頼中', '完成（検収依頼中）', '修正依頼中'];
+    const DEPT_EXTRA_PROGRESS = {
+      designer: ['画像URL発行待ち'],
+    };
+
+    function getProgressOptions(dept) {
+      const opts = [...BASE_PROGRESS_OPTIONS, ...(DEPT_EXTRA_PROGRESS[dept] || [])];
+      state.workers.forEach(w => {
+        if (!normalizeWorkerActive(w.active)) return;
+        if (!isReviewerForDept(w, dept)) return;
+        opts.push(`${w.name}検収完了`);
+      });
+      return opts;
+    }
+
+    function startOrderInlineEdit(td) {
+      if (td.querySelector('.inline-edit')) return;
+      const orderId = td.dataset.orderId;
+      const field = td.dataset.orderField;
+      if (!orderId || !field) return;
+
+      // 記事一覧からは納品日のみ編集可能
+      if (field !== 'delivered_at') return;
+
+      const order = state.kpiOrders.find(o => String(o.id) === String(orderId));
+      if (!order) return;
+
+      let currentValue, input;
+
+      if (field === 'delivered_at') {
+        currentValue = order.delivered_at || '';
+        input = document.createElement('input');
+        input.type = 'datetime-local';
+        input.className = 'inline-edit';
+        input.value = currentValue;
+      } else if (field === 'progress') {
+        currentValue = order.progress || '';
+        input = document.createElement('select');
+        input.className = 'inline-edit';
+        const dept = order.department || '';
+        const opts = getProgressOptions(dept);
+        if (currentValue && !opts.includes(currentValue)) opts.unshift(currentValue);
+        opts.forEach(opt => {
+          const o = document.createElement('option');
+          o.value = opt;
+          o.textContent = opt;
+          if (opt === currentValue) o.selected = true;
+          input.appendChild(o);
+        });
+      } else {
+        return;
+      }
+
+      const origHtml = td.innerHTML;
+      td.innerHTML = '';
+      td.appendChild(input);
+      input.focus();
+
+      async function save() {
+        const newValue = input.value.trim();
+        const dbField = field === 'worker_name' ? 'worker_id' : field;
+        const payload = { [dbField]: newValue || null };
+        const { error } = await db.from('orders').update(payload).eq('id', orderId);
+        if (error) {
+          showNotice(`保存失敗: ${error.message}`, 'error');
+          td.innerHTML = origHtml;
+          return;
+        }
+        order[dbField] = newValue || null;
+        if (field === 'deadline' || field === 'delivered_at') {
+          const artId = order.article_id;
+          if (artId) await updateReleaseStatus(artId);
+        }
+        await loadKpiOrders();
+        renderRows();
+      }
+
+      input.addEventListener('blur', save);
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+        if (e.key === 'Escape') { td.innerHTML = origHtml; }
+      });
+      if (input.tagName === 'SELECT') {
+        input.addEventListener('change', () => input.blur());
+      }
+    }
+
+    function populateMonthFilter() {
+      if (els.orderMonthFilter.options.length) return;
+      const now = new Date();
+      for (let offset = -12; offset <= 6; offset += 1) {
+        const date = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+        const value = formatMonth(date);
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        els.orderMonthFilter.appendChild(option);
+      }
+      els.orderMonthFilter.value = formatMonth(now);
+    }
+
+    function currentOrderTaskCategory() {
+      return document.querySelector('input[name="task_category"]:checked')?.value || '作成依頼';
+    }
+
+    function setOrderTaskCategory(value) {
+      const nextValue = value === '検収' ? '検収' : '作成依頼';
+      els.orderTaskCategoryRadios.forEach((radio) => {
+        radio.checked = radio.value === nextValue;
+      });
+    }
+
+    function orderTaskCategory(order) {
+      return order?.task_category === '検収' ? '検収' : '作成依頼';
+    }
+
+    function shouldShowParentOrderSelect() {
+      return currentOrderTaskCategory() === '検収' && els.orderType.value === 'リライト';
+    }
+
+    function populateWorkerSelects() {
+      const currentFilterValue = els.orderWorkerFilter.value;
+      els.orderWorkerFilter.innerHTML = '<option value="">全員</option>';
+
+      state.workers.forEach((worker) => {
+        // フィルターには全員出す（過去発注の検索用）
+        const filterOption = document.createElement('option');
+        filterOption.value = worker.id;
+        filterOption.textContent = worker.name || '(名前なし)';
+        els.orderWorkerFilter.appendChild(filterOption);
+      });
+
+      populateOrderWorkerSelect();
+
+      if (Array.from(els.orderWorkerFilter.options).some((option) => option.value === currentFilterValue)) {
+        els.orderWorkerFilter.value = currentFilterValue;
+      }
+    }
+
+    function populateOrderWorkerSelect(selectedValue = els.orderWorker.value) {
+      const dept = els.orderDepartment.value;
+      const isReviewTask = currentOrderTaskCategory() === '検収';
+      const currentVal = String(selectedValue || '');
+      els.orderWorker.innerHTML = '<option value="">選択してください</option>';
+      state.workers.forEach(w => {
+        if (!normalizeWorkerActive(w.active)) return;
+        const roles = workerRoles(w);
+        if (isReviewTask) {
+          // 検収者: is_reviewer=true かつ 該当部門 or manager
+          if (!isReviewer(w)) return;
+          if (!roles.includes(dept) && !roles.includes('manager')) return;
+        } else if (!roles.includes(dept) && !roles.includes('manager')) {
+          return;
+        }
+        const opt = document.createElement('option');
+        opt.value = w.id;
+        opt.textContent = isReviewTask
+          ? `${w.name || '(名前なし)'}${roles.includes('manager') ? '（マネージャー）' : '（検収）'}`
+          : `${w.name || '(名前なし)'}${roles.includes('manager') ? '（マネージャー）' : ''}`;
+        els.orderWorker.appendChild(opt);
+      });
+
+      if (currentVal && !Array.from(els.orderWorker.options).some(o => o.value === currentVal)) {
+        const worker = state.workers.find(w => String(w.id) === currentVal);
+        if (worker) {
+          const opt = document.createElement('option');
+          opt.value = worker.id;
+          opt.textContent = `${worker.name || '(名前なし)'}（現在の設定）`;
+          els.orderWorker.appendChild(opt);
+        }
+      }
+
+      if (Array.from(els.orderWorker.options).some(o => o.value === currentVal)) {
+        els.orderWorker.value = currentVal;
+      }
+    }
+
+    function parentOrderLabel(order) {
+      const date = formatDateTime(order?.ordered_at).split(' ')[0] || '日付なし';
+      return `${date} ${workerName(order?.worker_id) || 'ワーカー未設定'}`;
+    }
+
+    function rewriteCreationOrders() {
+      const currentOrderId = String(els.orderId.value || '');
+      const articleId = String(els.orderArticle.value || '');
+      return state.kpiOrders
+        .filter(o => String(o.id) !== currentOrderId)
+        .filter(o => orderTaskCategory(o) === '作成依頼')
+        .filter(o => o.order_type === 'リライト')
+        .filter(o => !articleId || String(o.article_id) === articleId)
+        .sort((a, b) => new Date(b.ordered_at || 0) - new Date(a.ordered_at || 0));
+    }
+
+    function populateParentOrderSelect(selectedValue = els.parentOrderSelect.value) {
+      const currentVal = String(selectedValue || '');
+      els.parentOrderSelect.innerHTML = '<option value="">選択してください</option>';
+      rewriteCreationOrders().forEach(order => {
+        const opt = document.createElement('option');
+        opt.value = order.id;
+        opt.textContent = parentOrderLabel(order);
+        els.parentOrderSelect.appendChild(opt);
+      });
+
+      if (currentVal && !Array.from(els.parentOrderSelect.options).some(o => o.value === currentVal)) {
+        const order = state.kpiOrders.find(o => String(o.id) === currentVal);
+        if (order) {
+          const opt = document.createElement('option');
+          opt.value = order.id;
+          opt.textContent = `${parentOrderLabel(order)}（現在の設定）`;
+          els.parentOrderSelect.appendChild(opt);
+        }
+      }
+
+      if (Array.from(els.parentOrderSelect.options).some(o => o.value === currentVal)) {
+        els.parentOrderSelect.value = currentVal;
+      }
+    }
+
+    // 種類 → 部門の自動マッピング
+    const ORDER_TYPE_TO_DEPT = {
+      'イントロ執筆': 'intro_writer',
+      '画像デザイン': 'designer',
+      '医院情報収集': 'researcher',
+      '医院紹介文': 'clinic_writer',
+    };
+
+    function syncOrderTaskCategoryUi(selectedWorkerId, selectedParentOrderId) {
+      const isReviewTask = currentOrderTaskCategory() === '検収';
+      const showParent = shouldShowParentOrderSelect();
+      const orderType = els.orderType.value;
+      const autoDept = ORDER_TYPE_TO_DEPT[orderType];
+
+      // 検収時: 種類に対応する部門があれば自動セット＋部門非表示
+      // リライト/その他は部門選択を表示
+      if (isReviewTask && autoDept) {
+        els.orderDepartment.value = autoDept;
+        els.orderDepartmentField.classList.add('hidden');
+      } else if (isReviewTask && !autoDept) {
+        els.orderDepartmentField.classList.remove('hidden');
+      } else {
+        els.orderDepartmentField.classList.remove('hidden');
+      }
+
+      els.orderWorkerLabel.textContent = isReviewTask ? 'ワーカー（検収者）' : 'ワーカー';
+      populateOrderWorkerSelect(selectedWorkerId ?? els.orderWorker.value);
+      populateOrderProgressSelect();
+      populateParentOrderSelect(selectedParentOrderId ?? els.parentOrderSelect.value);
+      els.parentOrderField.classList.toggle('hidden', !showParent);
+      els.parentOrderSelect.required = showParent;
+      if (!showParent) els.parentOrderSelect.value = '';
+    }
+
+    function populateArticleSelect() {
+      const currentValue = els.orderArticle.value;
+      const query = String(els.orderArticleSearch.value || '').trim().toLowerCase();
+      els.orderArticle.innerHTML = '<option value="">なし</option>';
+      state.articles.forEach((article) => {
+        const title = article.title || '無題';
+        if (query && !title.toLowerCase().includes(query)) return;
+        const option = document.createElement('option');
+        option.value = article.id;
+        option.textContent = title;
+        els.orderArticle.appendChild(option);
+      });
+      if (Array.from(els.orderArticle.options).some((option) => option.value === currentValue)) {
+        els.orderArticle.value = currentValue;
+      }
+    }
+
+    function renderOrderKpis() {
+      const currentMonth = formatMonth(new Date());
+      const lastMonth = formatMonth(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1));
+      const current = state.kpiOrders.filter((order) => String(order.ordered_at || '').startsWith(currentMonth));
+      const last = state.kpiOrders.filter((order) => String(order.ordered_at || '').startsWith(lastMonth));
+      const unpaid = state.kpiOrders.filter((order) => order.status !== '支払済み');
+      const currentTotal = current.reduce((sum, order) => sum + Number(order.amount || 0), 0);
+      const lastTotal = last.reduce((sum, order) => sum + Number(order.amount || 0), 0);
+      const unpaidTotal = unpaid.reduce((sum, order) => sum + Number(order.amount || 0), 0);
+
+      els.currentMonthOrderAmount.textContent = formatYen(currentTotal);
+      els.currentMonthOrderCount.textContent = `${current.length}件`;
+      els.lastMonthOrderAmount.textContent = formatYen(lastTotal);
+      els.lastMonthOrderCount.textContent = `${last.length}件`;
+      els.unpaidAmount.textContent = formatYen(unpaidTotal);
+      els.unpaidCount.textContent = `${unpaid.length}件`;
+
+      els.orderMom.classList.remove('trend-up', 'trend-down');
+      if (lastTotal === 0) {
+        els.orderMom.textContent = currentTotal === 0 ? '前月比 0%' : '前月比 -';
+        return;
+      }
+      const diff = currentTotal - lastTotal;
+      const rate = Math.round((Math.abs(diff) / lastTotal) * 100);
+      if (diff > 0) {
+        els.orderMom.textContent = `前月比 ▲${rate}%`;
+        els.orderMom.classList.add('trend-up');
+      } else if (diff < 0) {
+        els.orderMom.textContent = `前月比 ▼${rate}%`;
+        els.orderMom.classList.add('trend-down');
+      } else {
+        els.orderMom.textContent = '前月比 0%';
+      }
+    }
+
+    function filteredOrders() {
+      const workerId = els.orderWorkerFilter.value;
+      const status = els.orderStatusFilter.value;
+      return state.orders.filter((order) => {
+        if (workerId && String(order.worker_id) !== String(workerId)) return false;
+        if (status && order.status !== status) return false;
+        return true;
+      });
+    }
+
+    function renderOrders() {
+      const rows = filteredOrders();
+      els.orderRows.innerHTML = '';
+      els.ordersEmptyState.classList.toggle('hidden', rows.length > 0);
+      const total = rows.reduce((sum, order) => sum + Number(order.amount || 0), 0);
+      els.ordersTotal.textContent = `合計 ${formatYen(total)}`;
+
+      rows.forEach((order) => {
+        const tr = document.createElement('tr');
+        const status = order.status || '発注済み';
+        tr.innerHTML = `
+          <td>${escapeHtml(orderTaskCategory(order))}</td>
+          <td>${escapeHtml(order.ordered_at ? formatDate(new Date(order.ordered_at)) : '')}</td>
+          <td class="title-cell">${escapeHtml(articleName(order.article_id))}</td>
+          <td>${escapeHtml(order.order_type || '')}</td>
+          <td>${escapeHtml(workerName(order.worker_id))}</td>
+          <td>${formatYen(order.amount)}</td>
+          <td><span class="status-badge ${orderStatusClass(status)}">${escapeHtml(status)}</span></td>
+          <td>
+            <div class="action-row">
+              <button class="edit-btn" type="button" data-action="edit-order" data-id="${escapeHtml(order.id)}">編集</button>
+              <button class="delete-btn" type="button" data-action="delete-order" data-id="${escapeHtml(order.id)}">削除</button>
+            </div>
+          </td>
+        `;
+        els.orderRows.appendChild(tr);
+      });
+    }
+
+    function filteredWorkers() {
+      const role = els.workerRoleFilter.value;
+      const active = els.workerActiveFilter.value;
+      const nameQuery = els.workerNameSearch.value.trim().toLowerCase();
+      return state.workers.filter((worker) => {
+        if (role && !workerRoles(worker).includes(role)) return false;
+        if (active && String(normalizeWorkerActive(worker.active)) !== active) return false;
+        if (nameQuery && !String(worker.name || '').toLowerCase().includes(nameQuery)) return false;
+        return true;
+      });
+    }
+
+    function renderWorkers() {
+      const rows = filteredWorkers();
+      els.workerRows.innerHTML = '';
+      els.workersEmptyState.classList.toggle('hidden', rows.length > 0);
+      els.workerCountDisplay.textContent = `${rows.length} / ${state.workers.length} 件`;
+
+      rows.forEach((worker) => {
+        const total = state.kpiOrders
+          .filter((order) => String(order.worker_id) === String(worker.id))
+          .reduce((sum, order) => sum + Number(order.amount || 0), 0);
+        const tr = document.createElement('tr');
+        const roles = workerRoles(worker);
+        const roleLabels = roles.map(r => workerRoleLabel(r) || r).join(', ');
+        const reviewerTag = worker.is_reviewer ? ' 🔍' : '';
+        const chatworkLink = String(worker.chatwork_link || '').trim();
+        const escapedChatworkLink = escapeHtml(chatworkLink);
+        const isActive = normalizeWorkerActive(worker.active);
+        tr.innerHTML = `
+          <td class="title-cell">${escapeHtml(worker.name || '')}</td>
+          <td><span class="status-badge worker-role-badge">${escapeHtml(roleLabels)}${reviewerTag}</span></td>
+          <td>${escapeHtml(worker.email || '')}</td>
+          <td class="url-cell">${chatworkLink ? `<a href="${escapedChatworkLink}" target="_blank" rel="noopener noreferrer">開く</a>` : ''}</td>
+          <td><span class="status-badge ${isActive ? 'status-published' : 'status-draft'}">${isActive ? '有効' : '契約終了'}</span></td>
+          <td>${formatYen(total)}</td>
+          <td>
+            <div class="action-row">
+              <button class="edit-btn" type="button" data-action="edit-worker" data-id="${escapeHtml(worker.id)}">編集</button>
+              <button class="delete-btn" type="button" data-action="delete-worker" data-id="${escapeHtml(worker.id)}">削除</button>
+            </div>
+          </td>
+        `;
+        els.workerRows.appendChild(tr);
+      });
+    }
+
+    function auditPriorityClass(priority) {
+      if (priority === '最高') return 'priority-critical';
+      if (priority === '高') return 'priority-high';
+      if (priority === '中') return 'priority-medium';
+      return 'priority-low';
+    }
+
+    function auditStatusClass(status) {
+      if (status === '未対応') return 'audit-status-open';
+      if (status === '対応中') return 'audit-status-progress';
+      if (status === '完了') return 'audit-status-done';
+      return 'audit-status-ignored';
+    }
+
+    function auditResolutionClass(type) {
+      if (type === '記事修正') return 'audit-status-done';
+      if (type === '指摘誤り') return 'audit-status-ignored';
+      if (type === '対応不要') return 'priority-low';
+      if (type === '保留') return 'audit-status-progress';
+      return 'audit-status-open';
+    }
+
+    function buildAuditKnowledgeText(audit, response) {
+      const merged = { ...audit, ...response };
+      const lines = [
+        ['記事', merged.article_title || merged.article_url],
+        ['クリニック', merged.clinic_name],
+        ['指摘種別', merged.issue_type],
+        ['優先度', merged.priority],
+        ['問題の説明', merged.description],
+        ['記事に書いてある内容', merged.current_in_article],
+        ['実際の最新情報', merged.actual_info],
+        ['根拠URL', merged.source_url],
+        ['修正案', merged.suggested_fix],
+        ['対応分類', merged.resolution_type],
+        ['対応方法', merged.resolution_plan],
+        ['実際の対応内容', merged.resolution_result],
+        ['メモ', merged.resolution_memo],
+        ['ステータス', merged.status]
+      ];
+      return lines
+        .filter(([, value]) => String(value || '').trim())
+        .map(([label, value]) => `${label}: ${String(value).trim()}`)
+        .join('\n');
+    }
+
+    function shortText(value, max) {
+      const text = String(value || '');
+      return text.length > max ? `${text.slice(0, max)}...` : text;
+    }
+
+    function auditDate(raw) {
+      if (!raw) return '';
+      const date = new Date(raw);
+      return Number.isNaN(date.getTime()) ? String(raw) : formatDate(date);
+    }
+
+    function auditLink(url) {
+      const text = String(url || '').trim();
+      const href = safeHref(text);
+      if (!text) return '-';
+      if (!href) return escapeHtml(text);
+      return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(text)}</a>`;
+    }
+
+    async function loadAudits() {
+      const button = document.getElementById('refreshAuditButton');
+      setButtonBusy(button, true, '更新中...');
+      const { data, error } = await db
+        .from('article_audits')
+        .select('*')
+        .order('created_at', { ascending: false });
+      setButtonBusy(button, false);
+
+      if (error) {
+        state.audits = [];
+        state.auditsLoaded = false;
+        renderAuditTab();
+        showNotice(`監査データの取得に失敗しました: ${error.message}`, 'error');
+        return;
+      }
+
+      state.audits = data || [];
+      state.auditsLoaded = true;
+      renderAuditTab();
+    }
+
+    function filteredAudits() {
+      const priority = document.getElementById('auditPriorityFilter')?.value || '';
+      const status = document.getElementById('auditStatusFilter')?.value || '';
+      const type = document.getElementById('auditTypeFilter')?.value || '';
+      const query = String(document.getElementById('auditSearchInput')?.value || '').trim().toLowerCase();
+      return state.audits.filter((audit) => {
+        if (priority && audit.priority !== priority) return false;
+        if (status && (audit.status || '未対応') !== status) return false;
+        if (type && audit.issue_type !== type) return false;
+        if (query) {
+          const haystack = [
+            audit.article_title,
+            audit.clinic_name,
+            audit.issue_type,
+            audit.description,
+            audit.current_in_article,
+            audit.actual_info,
+            audit.suggested_fix,
+            audit.source_url,
+            audit.resolution_type,
+            audit.resolution_plan,
+            audit.resolution_result,
+            audit.resolution_memo,
+            audit.knowledge_text
+          ].filter(Boolean).join(' ').toLowerCase();
+          if (!haystack.includes(query)) return false;
+        }
+        return true;
+      });
+    }
+
+    function renderAuditTab() {
+      const total = state.audits.length;
+      document.getElementById('auditKpiTotal').textContent = total;
+      document.getElementById('auditKpiCritical').textContent = state.audits.filter(a => a.priority === '最高').length;
+      document.getElementById('auditKpiHigh').textContent = state.audits.filter(a => a.priority === '高').length;
+      document.getElementById('auditKpiOpen').textContent = state.audits.filter(a => (a.status || '未対応') === '未対応').length;
+
+      const tbody = document.getElementById('auditRows');
+      const empty = document.getElementById('auditEmptyState');
+      const rows = filteredAudits();
+      tbody.innerHTML = '';
+      empty.classList.toggle('hidden', rows.length > 0);
+
+      rows.forEach((audit) => {
+        const priority = audit.priority || '低';
+        const status = audit.status || '未対応';
+        const resolutionType = audit.resolution_type || '未判断';
+        const titleText = audit.article_title || audit.article_url || '';
+        const issueText = audit.resolution_result || audit.resolution_plan || audit.suggested_fix || audit.description || audit.current_in_article || audit.actual_info || '';
+        const created = auditDate(audit.created_at);
+        const tr = document.createElement('tr');
+        tr.dataset.auditId = audit.id;
+        tr.innerHTML = `
+          <td><span class="status-badge ${auditPriorityClass(priority)}">${escapeHtml(priority)}</span></td>
+          <td>${escapeHtml(audit.issue_type || '')}</td>
+          <td class="title-cell" title="${escapeHtml(titleText)}">${escapeHtml(shortText(titleText, 32))}</td>
+          <td title="${escapeHtml(issueText)}">${escapeHtml(shortText(issueText, 70))}</td>
+          <td><span class="status-badge ${auditStatusClass(status)}">${escapeHtml(status)}</span></td>
+          <td><span class="status-badge ${auditResolutionClass(resolutionType)}">${escapeHtml(resolutionType)}</span></td>
+          <td>${escapeHtml(created)}</td>
+          <td><button class="btn-secondary" data-action="audit-detail" data-id="${escapeHtml(audit.id)}" type="button" style="padding:4px 8px;font-size:12px;">詳細</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function closeAuditDetail() {
+      document.getElementById('auditDetailModal').classList.remove('open');
+    }
+
+    function openAuditDetail(audit) {
+      const priority = audit.priority || '低';
+      const fields = [
+        ['記事', escapeHtml(audit.article_title || '-')],
+        ['クリニック', escapeHtml(audit.clinic_name || '-')],
+        ['記事URL', auditLink(audit.article_url)],
+        ['種別', escapeHtml(audit.issue_type || '-')],
+        ['優先度', `<span class="status-badge ${auditPriorityClass(priority)}">${escapeHtml(priority)}</span>`],
+        ['問題の説明', escapeHtml(audit.description || '-')],
+        ['記事に書いてある内容', escapeHtml(audit.current_in_article || '-')],
+        ['実際の最新情報', escapeHtml(audit.actual_info || '-')],
+        ['根拠URL', auditLink(audit.source_url)],
+        ['修正案', escapeHtml(audit.suggested_fix || '-')]
+      ];
+      document.getElementById('auditDetailBody').innerHTML = fields.map(([label, value]) => `
+        <div>
+          <strong style="color:var(--label);">${label}</strong>
+          <div style="margin-top:2px;white-space:pre-wrap;">${value}</div>
+        </div>
+      `).join('');
+      document.getElementById('auditDetailStatusSelect').value = audit.status || '未対応';
+      document.getElementById('auditResolutionTypeSelect').value = audit.resolution_type || '未判断';
+      document.getElementById('auditResolutionPlanInput').value = audit.resolution_plan || '';
+      document.getElementById('auditResolutionResultInput').value = audit.resolution_result || '';
+      document.getElementById('auditResolutionMemoInput').value = audit.resolution_memo || '';
+      document.getElementById('auditDetailSaveBtn').onclick = async () => {
+        const now = new Date().toISOString();
+        const nextStatus = document.getElementById('auditDetailStatusSelect').value;
+        const resolutionType = document.getElementById('auditResolutionTypeSelect').value;
+        const resolutionPlan = document.getElementById('auditResolutionPlanInput').value.trim();
+        const resolutionResult = document.getElementById('auditResolutionResultInput').value.trim();
+        const resolutionMemo = document.getElementById('auditResolutionMemoInput').value.trim();
+        const resolved = ['完了', '無視'].includes(nextStatus) || ['記事修正', '指摘誤り', '対応不要'].includes(resolutionType);
+        const payload = {
+          status: nextStatus,
+          resolution_type: resolutionType,
+          resolution_plan: resolutionPlan || null,
+          resolution_result: resolutionResult || null,
+          resolution_memo: resolutionMemo || null,
+          resolved_at: resolved ? (audit.resolved_at || now) : null,
+          resolved_by_email: resolved ? (state.session?.user?.email || audit.resolved_by_email || null) : null,
+          updated_at: now
+        };
+        payload.knowledge_text = buildAuditKnowledgeText(audit, payload);
+        const { error } = await db
+          .from('article_audits')
+          .update(payload)
+          .eq('id', audit.id);
+        if (error) {
+          showNotice(`対応内容の保存に失敗しました: ${error.message}`, 'error');
+          return;
+        }
+        Object.assign(audit, payload);
+        renderAuditTab();
+        closeAuditDetail();
+        showNotice('対応内容を保存しました。');
+      };
+      document.getElementById('auditDetailModal').classList.add('open');
+    }
+
+    function renderAllNewAreas() {
+      populateWorkerSelects();
+      populateArticleSelect();
+      renderOrderKpis();
+      renderOrders();
+      renderWorkers();
+      renderAuditTab();
+    }
+
+    function setActiveTab(tab, shouldPushHash = true) {
+      const nextTab = tabHashes[tab] ? tab : 'articles';
+      state.activeTab = nextTab;
+      els.tabButtons.forEach((button) => {
+        button.classList.toggle('active', button.dataset.tab === nextTab);
+      });
+      els.articlesTab.classList.toggle('hidden-panel', nextTab !== 'articles');
+      els.ordersTab.classList.toggle('hidden-panel', nextTab !== 'orders');
+      document.getElementById('rewriteTab').classList.toggle('hidden-panel', nextTab !== 'rewrite');
+      document.getElementById('workflowTab').classList.toggle('hidden-panel', nextTab !== 'workflow');
+      els.workersTab.classList.toggle('hidden-panel', nextTab !== 'workers');
+      els.auditTab.classList.toggle('hidden-panel', nextTab !== 'audit');
+      if (nextTab === 'rewrite') renderRewriteTab();
+      if (nextTab === 'workflow') renderWorkflowTab();
+      if (nextTab === 'orders') renderWorkerBilling();
+      if (nextTab === 'audit' && !els.appView.classList.contains('hidden')) {
+        if (state.auditsLoaded) renderAuditTab();
+        else loadAudits();
+      }
+      if (shouldPushHash && window.location.hash !== tabHashes[nextTab]) {
+        window.location.hash = tabHashes[nextTab];
+      }
+    }
+
+    function syncTabFromHash() {
+      const found = Object.entries(tabHashes).find(([, hash]) => hash === window.location.hash);
+      setActiveTab(found ? found[0] : 'articles', false);
+    }
+
+    function showAuthenticated(session) {
+      state.session = session;
+      els.loginView.classList.add('hidden');
+      els.appView.classList.remove('hidden');
+      syncTabFromHash();
+    }
+
+    function showLogin() {
+      state.session = null;
+      state.articles = [];
+      state.workers = [];
+      state.orders = [];
+      state.kpiOrders = [];
+      state.audits = [];
+      state.auditsLoaded = false;
+      els.appView.classList.add('hidden');
+      els.loginView.classList.remove('hidden');
+      render();
+      renderAllNewAreas();
+    }
+
+    async function loadArticles() {
+      showNotice('');
+      const { data, error } = await fetchAll('articles');
+      if (error) {
+        showNotice(`記事の読み込みに失敗しました: ${error.message}`, 'error');
+        return;
+      }
+
+      state.articles = (data || []).slice().sort((a, b) => Number(a.id) - Number(b.id));
+      state.articlePage = 0;
+      render();
+      populateArticleSelect();
+    }
+
+    async function loadMasterData() {
+      const [catRes, acRes, cliRes] = await Promise.all([
+        db.from('master_categories').select('*').order('sort_order'),
+        db.from('master_article_categories').select('*').order('sort_order'),
+        db.from('master_clients').select('*').order('sort_order')
+      ]);
+      state.categories = catRes.data || [];
+      state.articleCategories = acRes.data || [];
+      state.clients = cliRes.data || [];
+      renderMasterLists();
+      populateGenreSelects();
+      populateCategoryCheckboxes();
+      populateClientSelects();
+      populateArticleGenreFilter();
+      populateArticleCategorySelects();
+    }
+
+    function renderMasterLists() {
+      renderMasterList('masterCategoryList', state.categories, 'category');
+      renderMasterList('masterClientList', state.clients, 'client');
+      renderMasterList('masterArticleCategoryList', state.articleCategories, 'article_category');
+    }
+
+    function renderMasterList(containerId, items, type) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      container.innerHTML = '';
+      items.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'master-row';
+        row.innerHTML = `<span style="flex:1;font-size:0.8rem;">${escapeHtml(item.name)}</span>
+          <button type="button" class="delete-master" data-type="${type}" data-id="${item.id}">削除</button>`;
+        container.appendChild(row);
+      });
+    }
+
+    function populateGenreSelects() {
+      ['createGenreSelect', 'editGenreSelect'].forEach(id => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const current = sel.value;
+        sel.innerHTML = '<option value="">-- 選択 --</option>';
+        state.categories.forEach(cat => {
+          const opt = document.createElement('option');
+          opt.value = cat.name;
+          opt.textContent = cat.name;
+          sel.appendChild(opt);
+        });
+        sel.value = current;
+      });
+    }
+
+    function populateCategoryCheckboxes(selectedValues) {
+      [els.createCategoryCheckboxes, els.editCategoryCheckboxes].forEach((container, idx) => {
+        if (!container) return;
+        const prefix = idx === 0 ? 'create' : 'edit';
+        container.innerHTML = '';
+        state.articleCategories.forEach(ac => {
+          const label = document.createElement('label');
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.name = `${prefix}_article_category`;
+          cb.value = ac.name;
+          if (selectedValues && selectedValues.includes(ac.name)) cb.checked = true;
+          label.appendChild(cb);
+          label.appendChild(document.createTextNode(ac.name));
+          container.appendChild(label);
+        });
+      });
+    }
+
+    function populateClientSelects() {
+      ['createNo1Client', 'editNo1Client'].forEach(id => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const current = sel.value;
+        sel.innerHTML = '<option value="">-- 選択 --</option>';
+        state.clients.forEach(cli => {
+          const opt = document.createElement('option');
+          opt.value = cli.name;
+          opt.textContent = cli.name;
+          sel.appendChild(opt);
+        });
+        sel.value = current;
+      });
+    }
+
+    function populateArticleGenreFilter() {
+      const sel = document.getElementById('articleGenreFilter');
+      if (!sel) return;
+      const current = sel.value;
+      sel.innerHTML = '<option value="">全て</option>';
+      state.categories.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat.name;
+        opt.textContent = cat.name;
+        sel.appendChild(opt);
+      });
+      sel.value = current;
+    }
+
+    function populateArticleCategorySelects() {
+      ['createCategory', 'editCategory'].forEach(id => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const current = sel.value;
+        sel.innerHTML = '<option value="">-- 選択 --</option>';
+        state.articleCategories.forEach(ac => {
+          const opt = document.createElement('option');
+          opt.value = ac.name;
+          opt.textContent = ac.name;
+          sel.appendChild(opt);
+        });
+        sel.value = current;
+      });
+      // フィルター
+      const filterSel = document.getElementById('articleCategoryFilter');
+      if (filterSel) {
+        const cur = filterSel.value;
+        filterSel.innerHTML = '<option value="">全て</option>';
+        state.articleCategories.forEach(ac => {
+          const opt = document.createElement('option');
+          opt.value = ac.name;
+          opt.textContent = ac.name;
+          filterSel.appendChild(opt);
+        });
+        filterSel.value = cur;
+      }
+    }
+
+    async function addMasterItem(type) {
+      const tableMap = { category: 'master_categories', client: 'master_clients', article_category: 'master_article_categories' };
+      const inputMap = { category: 'newCategoryName', client: 'newClientName', article_category: 'newArticleCategoryName' };
+      const table = tableMap[type];
+      const inputId = inputMap[type];
+      if (!table) return;
+      const input = document.getElementById(inputId);
+      const name = input.value.trim();
+      if (!name) return;
+      const listMap = { category: state.categories, client: state.clients, article_category: state.articleCategories };
+      const maxSort = (listMap[type] || [])
+        .reduce((m, i) => Math.max(m, i.sort_order || 0), 0);
+      const { error } = await db.from(table).insert({ name, sort_order: maxSort + 1 });
+      if (error) { showNotice(`追加失敗: ${error.message}`, 'error'); return; }
+      input.value = '';
+      await loadMasterData();
+    }
+
+    async function deleteMasterItem(type, id) {
+      const tableMap = { category: 'master_categories', client: 'master_clients', article_category: 'master_article_categories' };
+      const table = tableMap[type];
+      if (!table) return;
+      const { error } = await db.from(table).delete().eq('id', id);
+      if (error) { showNotice(`削除失敗: ${error.message}`, 'error'); return; }
+      await loadMasterData();
+    }
+
+    async function loadWorkers() {
+      showNotice('');
+      const { data, error } = await db
+        .from('workers')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        showNotice(`ライターの読み込みに失敗しました: ${error.message}`, 'error');
+        return;
+      }
+
+      state.workers = data || [];
+      populateWorkerSelects();
+      renderRows();
+      renderWorkers();
+      renderOrders();
+    }
+
+    async function loadKpiOrders() {
+      const { data, error } = await fetchAll('orders');
+      if (error) { showNotice(`発注指標の読み込みに失敗しました: ${error.message}`, 'error'); return; }
+
+      state.kpiOrders = data;
+      renderRows();
+      renderOrderKpis();
+      renderWorkers();
+    }
+
+    async function loadOrders() {
+      showNotice('');
+      populateMonthFilter();
+      const bounds = monthBounds(els.orderMonthFilter.value);
+      const { data, error } = await db
+        .from('orders')
+        .select('*')
+        .gte('ordered_at', bounds.start)
+        .lt('ordered_at', bounds.end)
+        .order('ordered_at', { ascending: false });
+
+      if (error) {
+        showNotice(`発注の読み込みに失敗しました: ${error.message}`, 'error');
+        return;
+      }
+
+      state.orders = data || [];
+      renderOrders();
+      renderRows();
+    }
+
+    async function loadAllData() {
+      setBusy(true);
+      try {
+        populateMonthFilter();
+        await loadMasterData();
+        await loadArticles();
+        await loadWorkers();
+        await loadKpiOrders();
+        await loadOrders();
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function signIn() {
+      setButtonBusy(els.loginButton, true, 'ログイン中...');
+      const { error } = await db.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
+      if (error) {
+        showNotice(`ログインに失敗しました: ${error.message}`, 'error');
+        setButtonBusy(els.loginButton, false);
+      }
+    }
+
+    async function signOut() {
+      const { error } = await db.auth.signOut();
+      if (error) {
+        showNotice(`サインアウトに失敗しました: ${error.message}`, 'error');
+      }
+    }
+
+    function populateSkipWorkflowCheckboxes(container, selected) {
+      if (!container) return;
+      const skips = (selected || '').split(',').map(s => s.trim()).filter(Boolean);
+      container.innerHTML = '';
+      DEPT_KEYS.forEach(dept => {
+        const label = document.createElement('label');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = dept;
+        if (skips.includes(dept)) cb.checked = true;
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(DEPT_SHORT[dept] + ' 不要'));
+        container.appendChild(label);
+      });
+    }
+
+    function openCreateModal() {
+      els.createForm.reset();
+      populateCategoryCheckboxes();
+      populateClientSelects();
+      populateSkipWorkflowCheckboxes(document.querySelector('#createModal .skip-workflows-checkboxes'), '');
+      document.getElementById('createModal').classList.add('open');
+      document.getElementById('createTitle').focus();
+    }
+
+    function closeCreateModal() {
+      document.getElementById('createModal').classList.remove('open');
+      els.createForm.reset();
+    }
+
+    async function createArticle(event) {
+      event.preventDefault();
+      const payload = articlePayload(els.createForm);
+      if (!payload.title) {
+        showNotice('タイトルを入力してください。', 'error');
+        return;
+      }
+
+      setButtonBusy(els.createButton, true, '追加中...');
+      const { error } = await db.from('articles').insert(payload);
+      setButtonBusy(els.createButton, false);
+
+      if (error) {
+        showNotice(`記事の追加に失敗しました: ${error.message}`, 'error');
+        return;
+      }
+
+      closeCreateModal();
+      showNotice('記事を追加しました。');
+      await loadArticles();
+    }
+
+    function openEditModal(article) {
+      els.editId.value = article.id;
+      els.editTitle.value = article.title || '';
+      els.editUrl.value = article.url || '';
+      document.getElementById('editDraftUrl').value = article.draft_url || '';
+      els.editKeyword.value = article.keyword || '';
+      els.editStatus.value = normalizeStatus(article.status);
+      els.editMemo.value = getArticleNotes(article);
+      // 施術ジャンル（単一select）
+      document.getElementById('editGenreSelect').value = articleGenre(article) || '';
+      populateSkipWorkflowCheckboxes(document.querySelector('#editModal .skip-workflows-checkboxes'), article.skip_workflows || '');
+      // 記事カテゴリ（複数チェックボックス）
+      const cats = String(article.category || '').split(',').map(s => s.trim()).filter(Boolean);
+      populateCategoryCheckboxes(cats);
+      document.getElementById('editNo1Client').value = article.no1_client || '';
+      document.getElementById('editReleaseDate').value = article.release_date || '';
+      document.getElementById('editReleaseStatus').value = article.release_status || '記事完了待ち';
+      document.getElementById('editSeasonalAppeal').value = article.seasonal_appeal || 'なし';
+      document.getElementById('editFigmaUrl').value = article.figma_url || '';
+      document.getElementById('editImageFolderUrl').value = article.image_folder_url || '';
+      document.getElementById('editSurveyStatus').value = article.survey_status || '未完了';
+      document.getElementById('editSurveyUrl').value = article.survey_url || '';
+      document.getElementById('editPreReportUrl').value = article.pre_report_url || '';
+      document.getElementById('editBannedKeywords').value = article.banned_keywords || '';
+      document.getElementById('editUrgentNotice').value = article.urgent_notice || '';
+      document.getElementById('editRegulation').value = article.regulation || '';
+      els.editModal.classList.add('open');
+      els.editTitle.focus();
+    }
+
+    function closeEditModal() {
+      els.editModal.classList.remove('open');
+      els.editForm.reset();
+    }
+
+    async function updateArticle(event) {
+      event.preventDefault();
+      const id = els.editId.value;
+      const payload = articlePayload(els.editForm);
+      if (!id || !payload.title) {
+        showNotice('タイトルを入力してください。', 'error');
+        return;
+      }
+
+      setButtonBusy(els.saveEditButton, true, '保存中...');
+      const { error } = await db
+        .from('articles')
+        .update(payload)
+        .eq('id', id);
+      setButtonBusy(els.saveEditButton, false);
+
+      if (error) {
+        showNotice(`記事の更新に失敗しました: ${error.message}`, 'error');
+        return;
+      }
+
+      closeEditModal();
+      showNotice('記事を更新しました。');
+      await loadArticles();
+    }
+
+    async function deleteArticle(id) {
+      const article = state.articles.find((item) => String(item.id) === String(id));
+      const name = article?.title || 'この記事';
+      if (!window.confirm(`${name}を削除しますか？`)) return;
+
+      const { error } = await db
+        .from('articles')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        showNotice(`記事の削除に失敗しました: ${error.message}`, 'error');
+        return;
+      }
+
+      showNotice('記事を削除しました。');
+      await loadArticles();
+    }
+
+    function openOrderModal(order) {
+      const isEdit = Boolean(order);
+      els.orderForm.reset();
+      setOrderTaskCategory(orderTaskCategory(order));
+      els.orderArticleSearch.value = '';
+      populateArticleSelect();
+      els.orderId.value = order?.id || '';
+      els.orderModalTitle.textContent = isEdit ? '発注を編集' : '新規発注';
+      els.orderStatusField.classList.toggle('hidden', !isEdit);
+      els.deliveredAtField.classList.toggle('hidden', !isEdit);
+      els.paidAtField.classList.toggle('hidden', !isEdit);
+      els.orderArticle.value = order?.article_id || '';
+      els.orderType.value = order?.order_type || 'イントロ執筆';
+      els.orderAmount.value = order?.amount ?? '';
+      els.orderedAt.value = order?.ordered_at || formatDate(new Date());
+      document.getElementById('orderDeadline').value = order?.deadline || '';
+      els.orderStatus.value = order?.status || '発注済み';
+      els.deliveredAt.value = order?.delivered_at || '';
+      els.paidAt.value = order?.paid_at || '';
+      els.orderNotes.value = order?.notes || '';
+      els.orderDepartment.value = order?.department || 'intro_writer';
+      syncOrderTaskCategoryUi(order?.worker_id || '', order?.parent_order_id || '');
+      const pv = order?.progress || '依頼中';
+      if (!Array.from(els.orderProgress.options).some(o => o.value === pv)) {
+        const extra = document.createElement('option');
+        extra.value = pv;
+        extra.textContent = pv;
+        els.orderProgress.appendChild(extra);
+      }
+      els.orderProgress.value = pv;
+      els.orderModal.classList.add('open');
+      els.orderWorker.focus();
+    }
+
+    function closeOrderModal() {
+      els.orderModal.classList.remove('open');
+      els.orderForm.reset();
+    }
+
+    async function saveOrder(event) {
+      event.preventDefault();
+      const isEdit = Boolean(els.orderId.value);
+      const payload = orderPayload(els.orderForm, isEdit);
+      if (!payload.worker_id || !payload.ordered_at) {
+        showNotice('ライターと発注日を入力してください。', 'error');
+        return;
+      }
+      if (payload.task_category === '検収' && payload.order_type === 'リライト' && !payload.parent_order_id) {
+        showNotice('検収対象のリライト作成依頼を選択してください。', 'error');
+        return;
+      }
+
+      setButtonBusy(els.saveOrderButton, true, '保存中...');
+      const result = isEdit
+        ? await db.from('orders').update(payload).eq('id', els.orderId.value)
+        : await db.from('orders').insert(payload);
+      setButtonBusy(els.saveOrderButton, false);
+
+      if (result.error) {
+        showNotice(`発注の保存に失敗しました: ${result.error.message}`, 'error');
+        return;
+      }
+
+      closeOrderModal();
+      showNotice(isEdit ? '発注を更新しました。' : '発注を追加しました。');
+      await loadKpiOrders();
+      await loadOrders();
+      // リリースステータス再計算
+      if (payload.article_id) {
+        await updateReleaseStatus(payload.article_id);
+        renderRows();
+      }
+    }
+
+    async function deleteOrder(id) {
+      if (!window.confirm('この発注を削除しますか？')) return;
+      const order = state.orders.find(o => String(o.id) === String(id));
+      const { error } = await db.from('orders').delete().eq('id', id);
+      if (error) {
+        showNotice(`発注の削除に失敗しました: ${error.message}`, 'error');
+        return;
+      }
+      showNotice('発注を削除しました。');
+      await loadKpiOrders();
+      await loadOrders();
+      if (order?.article_id) {
+        await updateReleaseStatus(order.article_id);
+        renderRows();
+      }
+    }
+
+    function populateWorkerRoleCheckboxes(selectedRoles) {
+      const container = document.getElementById('workerRoleCheckboxes');
+      if (!container) return;
+      const allRoles = ['intro_writer', 'designer', 'researcher', 'clinic_writer', 'image_inserter', 'manager'];
+      container.innerHTML = '';
+      allRoles.forEach(role => {
+        const label = document.createElement('label');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = role;
+        if (selectedRoles.includes(role)) cb.checked = true;
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(workerRoleLabel(role)));
+        container.appendChild(label);
+      });
+    }
+
+    function openWorkerModal(worker) {
+      const isEdit = Boolean(worker);
+      els.workerEditForm.reset();
+      els.workerEditId.value = worker?.id || '';
+      els.workerModalTitle.textContent = isEdit ? 'ライターを編集' : 'ライターを登録';
+      els.workerEditName.value = worker?.name || '';
+      // 複数職種チェックボックスをセット
+      const roles = workerRoles(worker || {});
+      populateWorkerRoleCheckboxes(roles);
+      document.getElementById('workerEditRoleExtra').value = '';
+      document.getElementById('workerEditIsReviewer').checked = worker?.is_reviewer === true;
+      els.workerEditEmail.value = worker?.email || '';
+      els.workerEditChatworkLink.value = worker?.chatwork_link || '';
+      setWorkerActiveToggle(normalizeWorkerActive(worker?.active));
+      els.workerEditNotes.value = worker?.notes || '';
+      els.workerModal.classList.add('open');
+      els.workerEditName.focus();
+    }
+
+    function closeWorkerModal() {
+      els.workerModal.classList.remove('open');
+      els.workerEditForm.reset();
+      setWorkerActiveToggle(true);
+    }
+
+    function setWorkerActiveToggle(active) {
+      els.workerEditActive.value = active ? 'true' : 'false';
+      els.workerActiveToggle.textContent = active ? '有効' : '契約終了';
+      els.workerActiveToggle.classList.toggle('active', active);
+      els.workerActiveToggle.setAttribute('aria-pressed', String(active));
+    }
+
+    async function saveWorker(event) {
+      event.preventDefault();
+      const id = els.workerEditId.value;
+      const isEdit = Boolean(id);
+      const payload = workerPayload(els.workerEditForm);
+      if (!payload.name) {
+        showNotice('ライター名を入力してください。', 'error');
+        return;
+      }
+
+      setButtonBusy(els.saveWorkerButton, true, '保存中...');
+      const result = isEdit
+        ? await db.from('workers').update(payload).eq('id', id)
+        : await db.from('workers').insert(payload);
+      setButtonBusy(els.saveWorkerButton, false);
+
+      if (result.error) {
+        showNotice(`ライターの保存に失敗しました: ${result.error.message}`, 'error');
+        return;
+      }
+
+      closeWorkerModal();
+      showNotice(isEdit ? 'ライターを更新しました。' : 'ライターを追加しました。');
+      await loadWorkers();
+    }
+
+    async function deleteWorker(id) {
+      const worker = state.workers.find((item) => String(item.id) === String(id));
+      const name = worker?.name || 'このライター';
+      if (!window.confirm(`${name}を削除しますか？`)) return;
+
+      const { error } = await db.from('workers').delete().eq('id', id);
+      if (error) {
+        showNotice(`ライターの削除に失敗しました: ${error.message}`, 'error');
+        return;
+      }
+      showNotice('ライターを削除しました。');
+      await loadWorkers();
+      await loadOrders();
+    }
+
+    function csvEscape(value) {
+      const text = String(value ?? '');
+      if (/[",\n\r]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
+      return text;
+    }
+
+    function exportOrdersCsv() {
+      const month = els.orderMonthFilter.value;
+      const rows = filteredOrders();
+      const headers = ['発注日', '記事タイトル', '種類', '部門', 'ライター', '金額', 'ステータス', '進捗', '納期', '納品日', '支払日', 'メモ'];
+      const csvRows = [headers.join(',')];
+      rows.forEach(o => {
+        const cols = [
+          o.ordered_at ? formatDate(new Date(o.ordered_at)) : '',
+          articleName(o.article_id),
+          o.order_type || '',
+          DEPT_SHORT[o.department] || o.department || '',
+          workerName(o.worker_id),
+          o.amount || 0,
+          o.status || '',
+          o.progress || '',
+          o.deadline || '',
+          o.delivered_at || '',
+          o.paid_at || '',
+          o.notes || ''
+        ].map(v => `"${String(v).replace(/"/g, '""')}"`);
+        csvRows.push(cols.join(','));
+      });
+      const total = rows.reduce((s, o) => s + Number(o.amount || 0), 0);
+      csvRows.push(`,,,,,"${total}",,,,,,"合計"`);
+      const blob = new Blob(['\uFEFF' + csvRows.join('\n')], { type: 'text/csv;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `orders-${month}.csv`;
+      link.click();
+    }
+
+    function exportWorkersCsv() {
+      const columns = ['name', 'role', 'email', 'chatwork_link', 'notes', 'active'];
+      const lines = [
+        columns.join(','),
+        ...state.workers.map((worker) => columns.map((column) => {
+          if (column === 'role') return csvEscape(normalizeWorkerRole(worker.role));
+          if (column === 'active') return csvEscape(normalizeWorkerActive(worker.active));
+          return csvEscape(worker[column] || '');
+        }).join(','))
+      ];
+      const blob = new Blob([`\ufeff${lines.join('\r\n')}`], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `workers-${formatDate(new Date())}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function parseCsv(text) {
+      const rows = [];
+      let row = [];
+      let cell = '';
+      let inQuotes = false;
+      const source = String(text || '').replace(/^\ufeff/, '');
+      for (let index = 0; index < source.length; index += 1) {
+        const char = source[index];
+        const next = source[index + 1];
+        if (char === '"' && inQuotes && next === '"') {
+          cell += '"';
+          index += 1;
+        } else if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          row.push(cell);
+          cell = '';
+        } else if ((char === '\n' || char === '\r') && !inQuotes) {
+          if (char === '\r' && next === '\n') index += 1;
+          row.push(cell);
+          if (row.some((value) => value !== '')) rows.push(row);
+          row = [];
+          cell = '';
+        } else {
+          cell += char;
+        }
+      }
+      row.push(cell);
+      if (row.some((value) => value !== '')) rows.push(row);
+      return rows;
+    }
+
+    async function importWorkersCsv(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      try {
+        const rows = parseCsv(await file.text());
+        const headers = rows.shift()?.map((header) => header.trim()) || [];
+        const existingNames = new Set(state.workers.map((worker) => String(worker.name || '').trim()).filter(Boolean));
+        const payloads = rows.map((row) => {
+          const item = {};
+          headers.forEach((header, index) => {
+            item[header] = row[index] ?? '';
+          });
+          const name = String(item.name || '').trim();
+          if (!name || existingNames.has(name)) return null;
+          existingNames.add(name);
+          return {
+            name,
+            role: normalizeWorkerRole(String(item.role || '').trim()),
+            email: String(item.email || '').trim(),
+            chatwork_link: String(item.chatwork_link || '').trim(),
+            notes: String(item.notes || '').trim(),
+            active: normalizeWorkerActive(item.active)
+          };
+        }).filter(Boolean);
+
+        if (!payloads.length) {
+          showNotice('取り込めるライターがありませんでした。');
+          return;
+        }
+
+        const { error } = await db.from('workers').insert(payloads);
+        if (error) {
+          showNotice(`CSVインポートに失敗しました: ${error.message}`, 'error');
+          return;
+        }
+        showNotice(`${payloads.length}件のライターをインポートしました。`);
+        await loadWorkers();
+      } finally {
+        event.target.value = '';
+      }
+    }
+
+    els.loginButton.addEventListener('click', signIn);
+    els.signOutButton.addEventListener('click', signOut);
+    els.tabButtons.forEach((button) => {
+      button.addEventListener('click', () => setActiveTab(button.dataset.tab));
+    });
+    els.refreshButton.addEventListener('click', loadArticles);
+    document.getElementById('articleSearchInput').addEventListener('input', renderRows);
+    document.getElementById('articleStatusFilter').addEventListener('change', renderRows);
+    document.getElementById('articleGenreFilter').addEventListener('change', renderRows);
+    document.getElementById('articleReleaseFilter').addEventListener('change', renderRows);
+
+    // ヘッダークリックソート
+    document.querySelector('table[aria-label="記事一覧"] thead').addEventListener('click', (e) => {
+      const th = e.target.closest('th.sortable');
+      if (!th) return;
+      const key = th.dataset.sort;
+      if (state.articleSortKey === key) {
+        state.articleSortAsc = !state.articleSortAsc;
+      } else {
+        state.articleSortKey = key;
+        state.articleSortAsc = true;
+      }
+      // クラス更新
+      document.querySelectorAll('th.sortable').forEach(t => t.classList.remove('sort-asc', 'sort-desc'));
+      th.classList.add(state.articleSortAsc ? 'sort-asc' : 'sort-desc');
+      state.articlePage = 0;
+      renderRows();
+    });
+    document.getElementById('articleCategoryFilter').addEventListener('change', renderRows);
+    document.getElementById('rewriteStatusFilter').addEventListener('change', renderRewriteTab);
+    document.getElementById('workflowDeptFilter').addEventListener('change', renderWorkflowTab);
+    document.getElementById('workflowProgressFilter').addEventListener('change', renderWorkflowTab);
+    document.getElementById('workerBillingYear').addEventListener('change', renderWorkerBilling);
+    document.getElementById('newArticleButton').addEventListener('click', openCreateModal);
+    document.getElementById('exportArticlesBtn').addEventListener('click', exportArticlesCsv);
+    document.getElementById('bulkDeleteBtn').addEventListener('click', bulkDeleteArticles);
+    document.getElementById('selectAllArticles').addEventListener('change', (e) => {
+      const cbs = document.querySelectorAll('.article-select-cb');
+      cbs.forEach(cb => { cb.checked = e.target.checked; });
+      selectedArticleIds.clear();
+      if (e.target.checked) cbs.forEach(cb => selectedArticleIds.add(Number(cb.dataset.articleId)));
+      updateBulkDeleteBtn();
+    });
+    els.articleRows.addEventListener('change', (e) => {
+      if (!e.target.classList.contains('article-select-cb')) return;
+      const id = Number(e.target.dataset.articleId);
+      e.target.checked ? selectedArticleIds.add(id) : selectedArticleIds.delete(id);
+      updateBulkDeleteBtn();
+    });
+    document.getElementById('closeCreateModalButton').addEventListener('click', closeCreateModal);
+    document.getElementById('closeCategoryPickerBtn').addEventListener('click', closeCategoryPickerModal);
+    document.getElementById('saveCategoryPickerBtn').addEventListener('click', saveCategoryPicker);
+
+    // 監査タブイベント
+    document.getElementById('refreshAuditButton').addEventListener('click', loadAudits);
+    document.getElementById('auditPriorityFilter').addEventListener('change', renderAuditTab);
+    document.getElementById('auditStatusFilter').addEventListener('change', renderAuditTab);
+    document.getElementById('auditTypeFilter').addEventListener('change', renderAuditTab);
+    document.getElementById('auditSearchInput').addEventListener('input', renderAuditTab);
+    document.getElementById('closeAuditDetailBtn').addEventListener('click', closeAuditDetail);
+    document.getElementById('auditRows').addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-action="audit-detail"]');
+      if (!button) return;
+      const audit = state.audits.find((item) => String(item.id) === String(button.dataset.id));
+      if (audit) openAuditDetail(audit);
+    });
+
+    // マスタ管理イベント
+    document.getElementById('addCategoryBtn').addEventListener('click', () => addMasterItem('category'));
+    document.getElementById('addClientBtn').addEventListener('click', () => addMasterItem('client'));
+    document.getElementById('addArticleCategoryBtn').addEventListener('click', () => addMasterItem('article_category'));
+    document.getElementById('newCategoryName').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addMasterItem('category'); } });
+    document.getElementById('newClientName').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addMasterItem('client'); } });
+    document.getElementById('newArticleCategoryName').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addMasterItem('article_category'); } });
+    document.getElementById('masterSection').addEventListener('click', (e) => {
+      const btn = e.target.closest('.delete-master');
+      if (!btn) return;
+      deleteMasterItem(btn.dataset.type, btn.dataset.id);
+    });
+
+    els.createForm.addEventListener('submit', createArticle);
+    els.editForm.addEventListener('submit', updateArticle);
+    els.closeModalButton.addEventListener('click', closeEditModal);
+
+    els.newOrderButton.addEventListener('click', () => openOrderModal());
+    document.getElementById('exportOrdersCsvButton').addEventListener('click', exportOrdersCsv);
+    els.refreshOrdersButton.addEventListener('click', async () => {
+      await loadKpiOrders();
+      await loadOrders();
+    });
+    els.orderMonthFilter.addEventListener('change', loadOrders);
+    els.orderWorkerFilter.addEventListener('change', renderOrders);
+    els.orderStatusFilter.addEventListener('change', renderOrders);
+    els.orderArticleSearch.addEventListener('input', populateArticleSelect);
+    els.orderArticle.addEventListener('change', () => {
+      const articleId = els.orderArticle.value;
+      const urlsDiv = document.getElementById('orderArticleUrls');
+      const autoUrl = document.getElementById('orderAutoUrl');
+      const autoDraft = document.getElementById('orderAutoDraftUrl');
+      populateParentOrderSelect();
+      if (!articleId) { urlsDiv.style.display = 'none'; return; }
+      const article = state.articles.find(a => String(a.id) === String(articleId));
+      if (!article) { urlsDiv.style.display = 'none'; return; }
+      urlsDiv.style.display = '';
+      autoUrl.href = safeHref(article.url) || '#';
+      autoUrl.textContent = article.url || '-';
+      autoDraft.href = safeHref(article.draft_url) || '#';
+      autoDraft.textContent = article.draft_url || '-';
+    });
+    function populateOrderProgressSelect() {
+      const dept = currentOrderTaskCategory() === '検収' ? '' : els.orderDepartment.value;
+      const sel = document.getElementById('orderProgress');
+      const current = sel.value;
+      sel.innerHTML = '';
+      getProgressOptions(dept).forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt;
+        o.textContent = opt;
+        sel.appendChild(o);
+      });
+      if (Array.from(sel.options).some(o => o.value === current)) sel.value = current;
+    }
+
+    els.orderTaskCategoryRadios.forEach((radio) => {
+      radio.addEventListener('change', () => syncOrderTaskCategoryUi());
+    });
+    els.orderType.addEventListener('change', () => {
+      // 作成依頼時も種類→部門を自動連動
+      const autoDept = ORDER_TYPE_TO_DEPT[els.orderType.value];
+      if (autoDept && currentOrderTaskCategory() === '作成依頼') {
+        els.orderDepartment.value = autoDept;
+      }
+      syncOrderTaskCategoryUi();
+    });
+    els.orderDepartment.addEventListener('change', () => {
+      populateOrderWorkerSelect();
+      populateOrderProgressSelect();
+    });
+    els.orderForm.addEventListener('submit', saveOrder);
+    els.closeOrderModalButton.addEventListener('click', closeOrderModal);
+
+    els.newWorkerButton.addEventListener('click', () => openWorkerModal());
+    els.exportWorkersButton.addEventListener('click', exportWorkersCsv);
+    els.importWorkersButton.addEventListener('click', () => els.workerCsvInput.click());
+    els.workerCsvInput.addEventListener('change', importWorkersCsv);
+    els.workerRoleFilter.addEventListener('change', renderWorkers);
+    els.workerActiveFilter.addEventListener('change', renderWorkers);
+    els.workerNameSearch.addEventListener('input', renderWorkers);
+    els.refreshWorkersButton.addEventListener('click', async () => {
+      await loadWorkers();
+      await loadKpiOrders();
+    });
+    els.workerEditForm.addEventListener('submit', saveWorker);
+    els.workerActiveToggle.addEventListener('click', () => {
+      setWorkerActiveToggle(els.workerEditActive.value !== 'true');
+    });
+    els.closeWorkerModalButton.addEventListener('click', closeWorkerModal);
+
+    window.addEventListener('hashchange', syncTabFromHash);
+
+    // キーボードショートカット
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const modals = [
+          { el: document.getElementById('articleDetailModal'), close: typeof closeArticleDetail === 'function' ? closeArticleDetail : () => {} },
+          { el: document.getElementById('createModal'), close: closeCreateModal },
+          { el: els.editModal, close: closeEditModal },
+          { el: els.orderModal, close: closeOrderModal },
+          { el: els.workerModal, close: closeWorkerModal },
+          { el: document.getElementById('categoryPickerModal'), close: closeCategoryPickerModal },
+          { el: document.getElementById('auditDetailModal'), close: closeAuditDetail }
+        ];
+        for (const { el, close } of modals) {
+          if (el?.classList.contains('open')) { close(); e.preventDefault(); return; }
+        }
+        return;
+      }
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod) return;
+      if (e.key.toLowerCase() === 'f') { e.preventDefault(); document.getElementById('articleSearchInput')?.focus(); }
+      if (e.key.toLowerCase() === 'n') { e.preventDefault(); openCreateModal(); }
+    });
+
+    els.orderRows.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-action]');
+      if (!button) return;
+      const { action, id } = button.dataset;
+      if (action === 'edit-order') {
+        const order = state.orders.find((item) => String(item.id) === String(id));
+        if (order) openOrderModal(order);
+      }
+      if (action === 'delete-order') {
+        deleteOrder(id);
+      }
+    });
+
+    els.workerRows.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-action]');
+      if (!button) return;
+      const { action, id } = button.dataset;
+      if (action === 'edit-worker') {
+        const worker = state.workers.find((item) => String(item.id) === String(id));
+        if (worker) openWorkerModal(worker);
+      }
+      if (action === 'delete-worker') {
+        deleteWorker(id);
+      }
+    });
+
+    els.articleRows.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-action]');
+      if (button) {
+        event.stopPropagation();
+        const { action, id } = button.dataset;
+        if (action === 'edit') {
+          const article = state.articles.find((item) => String(item.id) === String(id));
+          if (article) openEditModal(article);
+        }
+        if (action === 'delete') {
+          deleteArticle(id);
+        }
+        return;
+      }
+      // IDセルクリック → 詳細表示
+      const idCell = event.target.closest('td.sticky-id');
+      if (idCell) {
+        const tr = idCell.closest('tr');
+        const articleId = tr?.dataset.id;
+        const article = state.articles.find(a => String(a.id) === String(articleId));
+        if (article && typeof openArticleDetail === 'function') openArticleDetail(article);
+        return;
+      }
+      // インライン編集: data-field属性のあるセルをクリック
+      const td = event.target.closest('td[data-field]');
+      if (td && !event.target.closest('a')) {
+        startInlineEdit(td);
+        return;
+      }
+      // 発注セルのインライン編集
+      const orderTd = event.target.closest('td[data-order-id][data-order-field]');
+      if (orderTd && !event.target.closest('a')) {
+        startOrderInlineEdit(orderTd);
+      }
+    });
+
+    const ALLOWED_EMAILS = ['okisuzuki1122@gmail.com', 'kzt.set01@gmail.com'];
+
+    function isAllowedUser(session) {
+      if (!session?.user?.email) return false;
+      return ALLOWED_EMAILS.includes(session.user.email);
+    }
+
+    db.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        if (!isAllowedUser(session)) {
+          showNotice('このアカウントではアクセスできません: ' + session.user.email, 'error');
+          db.auth.signOut();
+          return;
+        }
+        showAuthenticated(session);
+        loadAllData();
+      } else {
+        if (!AUTH_BYPASS) showLogin();
+      }
+    });
+
+    populateMonthFilter();
+    syncTabFromHash();
+
+    if (AUTH_BYPASS) { showAuthenticated(null); loadAllData(); }
+
+    db.auth.getSession().then(({ data, error }) => {
+      if (error) {
+        showNotice(`セッション取得に失敗しました: ${error.message}`, 'error');
+        if (!AUTH_BYPASS) showLogin();
+        return;
+      }
+      if (data.session) {
+        if (!isAllowedUser(data.session)) {
+          showNotice('このアカウントではアクセスできません: ' + data.session.user.email, 'error');
+          db.auth.signOut();
+          return;
+        }
+        showAuthenticated(data.session);
+        loadAllData();
+      } else {
+        if (!AUTH_BYPASS) showLogin();
+      }
+    });
+  </script>
+</body>
+</html>
