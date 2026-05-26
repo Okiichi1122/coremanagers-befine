@@ -933,6 +933,15 @@
         text-align: left;
       }
     }
+
+    /* 閲覧者モード: 編集操作を非表示 */
+    body.role-viewer [data-admin-only] {
+      display: none !important;
+    }
+    body.role-viewer td[data-order-id][data-order-field],
+    body.role-viewer td[data-article-id][data-field] {
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
@@ -971,6 +980,7 @@
       <button class="tab-button" type="button" data-tab="workflow">工程別ビュー</button>
       <button class="tab-button" type="button" data-tab="workers">ライター管理</button>
       <button class="tab-button" type="button" data-tab="audit">情報監査</button>
+      <button class="tab-button" type="button" data-tab="users" id="usersTabButton" style="display:none;">ユーザー管理</button>
     </nav>
 
     <div id="notice" class="notice" role="status"></div>
@@ -1482,7 +1492,60 @@
         </div>
       </section>
     </section>
+
+    <section id="usersTab" class="tab-panel stack hidden-panel">
+      <section class="card table-card">
+        <div class="table-headline">
+          <h2 class="card-title">ユーザー管理</h2>
+          <div class="table-actions">
+            <button id="addUserButton" class="btn-primary" type="button">＋ ユーザー追加</button>
+            <button id="refreshUsersButton" class="btn-secondary" type="button">更新</button>
+          </div>
+        </div>
+        <div id="usersEmptyState" class="empty-state hidden">ユーザーが登録されていません。</div>
+        <div class="table-wrap">
+          <table aria-label="ユーザー一覧">
+            <thead>
+              <tr>
+                <th>メールアドレス</th>
+                <th style="width:120px;">ロール</th>
+                <th style="width:150px;">追加者</th>
+                <th style="width:160px;">追加日</th>
+                <th style="width:80px;">操作</th>
+              </tr>
+            </thead>
+            <tbody id="usersRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
   </main>
+
+  <div id="userModal" class="modal-overlay" role="dialog" aria-modal="true">
+    <section class="card modal-card" style="max-width:480px;">
+      <div class="modal-header">
+        <h2 class="modal-title" id="userModalTitle">ユーザー追加</h2>
+        <button id="closeUserModalBtn" class="close-btn" type="button" aria-label="閉じる">×</button>
+      </div>
+      <form id="userEditForm" class="form-grid" autocomplete="off">
+        <input type="hidden" id="userEditId">
+        <div class="form-field full">
+          <label for="userEditEmail">メールアドレス（Googleアカウント）</label>
+          <input id="userEditEmail" type="email" required placeholder="example@gmail.com">
+        </div>
+        <div class="form-field full">
+          <label for="userEditRole">ロール</label>
+          <select id="userEditRole" required>
+            <option value="viewer">閲覧者</option>
+            <option value="admin">管理者</option>
+          </select>
+        </div>
+        <div class="form-field full" style="padding-top:8px;">
+          <button id="saveUserButton" class="btn-primary" type="submit">保存</button>
+        </div>
+      </form>
+    </section>
+  </div>
 
   <div id="categoryPickerModal" class="modal-overlay" role="dialog" aria-modal="true">
     <section class="card modal-card" style="max-width:420px;">
@@ -1964,7 +2027,8 @@
       rewrite: '#rewrite',
       workflow: '#workflow',
       workers: '#workers',
-      audit: '#audit'
+      audit: '#audit',
+      users: '#users'
     };
 
     const state = {
@@ -1980,6 +2044,9 @@
       articleSortKey: 'id',
       articleSortAsc: true,
       clients: [],
+      directories: [],
+      userRole: null,
+      appUsers: [],
       audits: [],
       auditsLoaded: false
     };
@@ -3605,6 +3672,8 @@
       document.getElementById('workflowTab').classList.toggle('hidden-panel', nextTab !== 'workflow');
       els.workersTab.classList.toggle('hidden-panel', nextTab !== 'workers');
       els.auditTab.classList.toggle('hidden-panel', nextTab !== 'audit');
+      document.getElementById('usersTab').classList.toggle('hidden-panel', nextTab !== 'users');
+      if (nextTab === 'users' && isAdmin()) loadAppUsers();
       if (nextTab === 'rewrite') renderRewriteTab();
       if (nextTab === 'workflow') renderWorkflowTab();
       if (nextTab === 'orders') renderWorkerBilling();
@@ -4607,31 +4676,143 @@
       }
     });
 
-    const ALLOWED_EMAILS = ['okisuzuki1122@gmail.com', 'kzt.set01@gmail.com'];
+    // --- ユーザー管理 (app_users) ---
 
-    function isAllowedUser(session) {
-      if (!session?.user?.email) return false;
-      return ALLOWED_EMAILS.includes(session.user.email);
+    async function checkAppUser(session) {
+      if (!session?.user?.email) return null;
+      const { data, error } = await db.rpc('get_my_app_role_v2');
+      if (error || !data) return null;
+      return data;
+    }
+
+    function isAdmin() {
+      return state.userRole === 'admin';
+    }
+
+    function applyRoleRestrictions() {
+      const readOnly = !isAdmin();
+      document.getElementById('usersTabButton').style.display = isAdmin() ? '' : 'none';
+      const editTargets = ['newArticleButton', 'addUserButton'];
+      editTargets.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = readOnly ? 'none' : '';
+      });
+      document.body.classList.toggle('role-viewer', readOnly);
+    }
+
+    async function loadAppUsers() {
+      const { data, error } = await db.rpc('list_app_users');
+      if (error) { showNotice(`ユーザー読み込み失敗: ${error.message}`, 'error'); return; }
+      state.appUsers = data || [];
+      renderAppUsers();
+    }
+
+    function renderAppUsers() {
+      const tbody = document.getElementById('usersRows');
+      const empty = document.getElementById('usersEmptyState');
+      if (!state.appUsers.length) {
+        tbody.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+      empty.classList.add('hidden');
+      const currentEmail = state.session?.user?.email;
+      tbody.innerHTML = state.appUsers.map(u => {
+        const isSelf = u.email === currentEmail;
+        const roleLabel = u.role === 'admin' ? '管理者' : '閲覧者';
+        const date = u.created_at ? new Date(u.created_at).toLocaleDateString('ja-JP') : '-';
+        const actions = isSelf
+          ? '<span style="color:var(--muted);font-size:12px;">自分</span>'
+          : `<button class="btn-secondary" style="font-size:12px;padding:2px 8px;" onclick="editAppUser('${u.id}')">編集</button>
+             <button class="btn-secondary" style="font-size:12px;padding:2px 8px;color:#e11d48;" onclick="deleteAppUser('${u.id}','${u.email}')">削除</button>`;
+        return `<tr>
+          <td>${u.email}</td>
+          <td><span class="status-badge" style="background:${u.role === 'admin' ? '#dbeafe' : '#f1f5f9'};color:${u.role === 'admin' ? '#1d4ed8' : '#64748b'};">${roleLabel}</span></td>
+          <td>${u.created_by || '-'}</td>
+          <td>${date}</td>
+          <td>${actions}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function openUserModal(user) {
+      const modal = document.getElementById('userModal');
+      document.getElementById('userModalTitle').textContent = user ? 'ユーザー編集' : 'ユーザー追加';
+      document.getElementById('userEditId').value = user?.id || '';
+      document.getElementById('userEditEmail').value = user?.email || '';
+      document.getElementById('userEditEmail').readOnly = !!user;
+      document.getElementById('userEditRole').value = user?.role || 'viewer';
+      modal.classList.add('open');
+    }
+
+    function editAppUser(id) {
+      const user = state.appUsers.find(u => u.id === id);
+      if (user) openUserModal(user);
+    }
+
+    async function deleteAppUser(id, email) {
+      if (!confirm(`${email} を削除しますか？`)) return;
+      const { error } = await db.rpc('delete_app_user', { p_id: id });
+      if (error) { showNotice(`削除失敗: ${error.message}`, 'error'); return; }
+      showNotice(`${email} を削除しました`, 'success');
+      await loadAppUsers();
+    }
+
+    async function saveAppUser(event) {
+      event.preventDefault();
+      const id = document.getElementById('userEditId').value;
+      const email = document.getElementById('userEditEmail').value.trim();
+      const role = document.getElementById('userEditRole').value;
+      if (!email) return;
+
+      const currentEmail = state.session?.user?.email || 'unknown';
+      const { error } = await db.rpc('upsert_app_user', {
+        p_id: id || '00000000-0000-0000-0000-000000000000',
+        p_email: email,
+        p_role: role,
+        p_created_by: currentEmail
+      });
+      if (error) {
+        if (error.message?.includes('duplicate') || error.message?.includes('unique')) {
+          showNotice('このメールアドレスは既に登録済みです', 'error'); return;
+        }
+        showNotice(`${id ? '更新' : '追加'}失敗: ${error.message}`, 'error'); return;
+      }
+      showNotice(`${email} を${id ? '更新' : '追加'}しました`, 'success');
+      document.getElementById('userModal').classList.remove('open');
+      await loadAppUsers();
+    }
+
+    document.getElementById('addUserButton').addEventListener('click', () => openUserModal(null));
+    document.getElementById('refreshUsersButton').addEventListener('click', loadAppUsers);
+    document.getElementById('userEditForm').addEventListener('submit', saveAppUser);
+    document.getElementById('closeUserModalBtn').addEventListener('click', () => document.getElementById('userModal').classList.remove('open'));
+
+    async function handleSession(session) {
+      if (!session) {
+        if (!AUTH_BYPASS) showLogin();
+        return;
+      }
+      const role = await checkAppUser(session);
+      if (!role) {
+        showNotice('このアカウントではアクセスできません: ' + session.user.email, 'error');
+        db.auth.signOut();
+        return;
+      }
+      state.userRole = role;
+      showAuthenticated(session);
+      applyRoleRestrictions();
+      loadAllData();
     }
 
     db.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        if (!isAllowedUser(session)) {
-          showNotice('このアカウントではアクセスできません: ' + session.user.email, 'error');
-          db.auth.signOut();
-          return;
-        }
-        showAuthenticated(session);
-        loadAllData();
-      } else {
-        if (!AUTH_BYPASS) showLogin();
-      }
+      handleSession(session);
     });
 
     populateMonthFilter();
     syncTabFromHash();
 
-    if (AUTH_BYPASS) { showAuthenticated(null); loadAllData(); }
+    if (AUTH_BYPASS) { state.userRole = 'admin'; showAuthenticated(null); applyRoleRestrictions(); loadAllData(); }
 
     db.auth.getSession().then(({ data, error }) => {
       if (error) {
@@ -4640,13 +4821,7 @@
         return;
       }
       if (data.session) {
-        if (!isAllowedUser(data.session)) {
-          showNotice('このアカウントではアクセスできません: ' + data.session.user.email, 'error');
-          db.auth.signOut();
-          return;
-        }
-        showAuthenticated(data.session);
-        loadAllData();
+        handleSession(data.session);
       } else {
         if (!AUTH_BYPASS) showLogin();
       }
