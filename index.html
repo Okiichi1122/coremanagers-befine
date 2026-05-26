@@ -1044,6 +1044,12 @@
         </div>
         <div class="filter-grid" style="margin-bottom:12px;">
           <div class="form-field">
+            <label for="articleDirectoryFilter">ディレクトリ</label>
+            <select id="articleDirectoryFilter">
+              <option value="">全て</option>
+            </select>
+          </div>
+          <div class="form-field">
             <label for="articleSearchInput">検索</label>
             <input id="articleSearchInput" type="text" placeholder="KW・タイトルで検索" autocomplete="off">
           </div>
@@ -1098,6 +1104,7 @@
               <tr>
                 <th style="width:30px;position:sticky;left:0;z-index:var(--z-sticky-header);background:#fff !important;"><input type="checkbox" id="selectAllArticles"></th>
                 <th class="sticky-id sortable" data-sort="id" style="left:30px;">記事ID</th>
+                <th class="sortable" data-sort="directory">ディレクトリ</th>
                 <th class="sticky-title sortable" data-sort="title">タイトル</th>
                 <th>URL</th>
                 <th>下書きURL</th>
@@ -1544,6 +1551,10 @@
       </div>
       <form id="createForm" class="form-grid">
         <div class="form-field">
+          <label for="createDirectory">ディレクトリ</label>
+          <select id="createDirectory" name="directory" required><option value="">-- 選択 --</option></select>
+        </div>
+        <div class="form-field">
           <label for="createTitle">タイトル</label>
           <input id="createTitle" name="title" type="text" autocomplete="off" required>
         </div>
@@ -1663,6 +1674,10 @@
       </div>
       <form id="editForm" class="form-grid">
         <input id="editId" type="hidden">
+        <div class="form-field">
+          <label for="editDirectory">ディレクトリ</label>
+          <select id="editDirectory" name="directory"><option value="">-- 選択 --</option></select>
+        </div>
         <div class="form-field full">
           <label for="editTitle">タイトル</label>
           <input id="editTitle" name="title" type="text" autocomplete="off" required>
@@ -2127,6 +2142,7 @@
         : els.editCategoryCheckboxes;
       const categories = getCheckedCategories(container);
       return {
+        directory: String(data.get('directory') || '').trim() || null,
         title: String(data.get('title') || '').trim(),
         url: String(data.get('url') || '').trim(),
         draft_url: String(data.get('draft_url') || '').trim() || null,
@@ -2483,11 +2499,13 @@
 
     function filteredArticles() {
       const q = (document.getElementById('articleSearchInput')?.value || '').trim().toLowerCase();
+      const dirF = document.getElementById('articleDirectoryFilter')?.value || '';
       const statusF = document.getElementById('articleStatusFilter')?.value || '';
       const genreF = document.getElementById('articleGenreFilter')?.value || '';
       const releaseF = document.getElementById('articleReleaseFilter')?.value || '';
       const catF = document.getElementById('articleCategoryFilter')?.value || '';
       const filtered = state.articles.filter(a => {
+        if (dirF && (a.directory || '') !== dirF) return false;
         if (q && !String(a.title || '').toLowerCase().includes(q) && !String(a.keyword || '').toLowerCase().includes(q)) return false;
         if (statusF && normalizeStatus(a.status) !== statusF) return false;
         if (genreF && !String(articleGenre(a)).includes(genreF)) return false;
@@ -2563,6 +2581,7 @@
         tr.innerHTML = `
           <td style="position:sticky;left:0;z-index:var(--z-sticky-col);background:#fff !important;"><input type="checkbox" class="article-select-cb" data-article-id="${article.id}"></td>
           <td class="sticky-id" style="left:30px;">${escapeHtml(article.id)}</td>
+          <td data-field="directory">${escapeHtml(article.directory || '')}</td>
           <td data-field="title" class="title-cell sticky-title">${title}</td>
           <td data-field="url" class="url-cell">${url ? `<a href="${escapeHtml(safeHref(url))}" target="_blank" rel="noopener noreferrer">${escapedUrl}</a>` : ''}</td>
           <td data-field="draft_url" class="url-cell">${article.draft_url ? `<a href="${escapeHtml(safeHref(article.draft_url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(article.draft_url)}</a>` : ''}</td>
@@ -2872,6 +2891,20 @@
           o.value = cli.name;
           o.textContent = cli.name;
           if (cli.name === currentValue) o.selected = true;
+          input.appendChild(o);
+        });
+      } else if (field === 'directory') {
+        input = document.createElement('select');
+        input.className = 'inline-edit';
+        const emptyOpt0 = document.createElement('option');
+        emptyOpt0.value = '';
+        emptyOpt0.textContent = '--';
+        input.appendChild(emptyOpt0);
+        (state.directories || []).forEach(dir => {
+          const o = document.createElement('option');
+          o.value = dir.name;
+          o.textContent = dir.name;
+          if (dir.name === currentValue) o.selected = true;
           input.appendChild(o);
         });
       } else if (field === 'genre') {
@@ -3625,20 +3658,36 @@
     }
 
     async function loadMasterData() {
-      const [catRes, acRes, cliRes] = await Promise.all([
+      const [catRes, acRes, cliRes, dirRes] = await Promise.all([
         db.from('master_categories').select('*').order('sort_order'),
         db.from('master_article_categories').select('*').order('sort_order'),
-        db.from('master_clients').select('*').order('sort_order')
+        db.from('master_clients').select('*').order('sort_order'),
+        db.from('master_directories').select('*').order('sort_order')
       ]);
       state.categories = catRes.data || [];
       state.articleCategories = acRes.data || [];
       state.clients = cliRes.data || [];
+      state.directories = dirRes.data || [];
       renderMasterLists();
       populateGenreSelects();
       populateCategoryCheckboxes();
       populateClientSelects();
       populateArticleGenreFilter();
       populateArticleCategorySelects();
+      populateDirectorySelects();
+    }
+
+    function populateDirectorySelects() {
+      const dirs = state.directories || [];
+      const opts = dirs.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
+      ['articleDirectoryFilter'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { const v = el.value; el.innerHTML = '<option value="">全て</option>' + opts; el.value = v; }
+      });
+      ['createDirectory', 'editDirectory'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { const v = el.value; el.innerHTML = '<option value="">-- 選択 --</option>' + opts; el.value = v; }
+      });
     }
 
     function renderMasterLists() {
@@ -3920,6 +3969,7 @@
 
     function openEditModal(article) {
       els.editId.value = article.id;
+      document.getElementById('editDirectory').value = article.directory || '';
       els.editTitle.value = article.title || '';
       els.editUrl.value = article.url || '';
       document.getElementById('editDraftUrl').value = article.draft_url || '';
@@ -4318,6 +4368,7 @@
     });
     els.refreshButton.addEventListener('click', loadArticles);
     document.getElementById('articleSearchInput').addEventListener('input', renderRows);
+    document.getElementById('articleDirectoryFilter').addEventListener('change', renderRows);
     document.getElementById('articleStatusFilter').addEventListener('change', renderRows);
     document.getElementById('articleGenreFilter').addEventListener('change', renderRows);
     document.getElementById('articleReleaseFilter').addEventListener('change', renderRows);
