@@ -1502,6 +1502,17 @@
         <div class="kpi-card"><span class="kpi-value" id="redirectCategoryCount">0</span><span class="kpi-label">カテゴリ数</span></div>
         <div class="kpi-card"><span class="kpi-value" id="redirect404Count">0</span><span class="kpi-label">404 / リンク無し</span></div>
       </section>
+      <details class="master-section">
+        <summary>URLカテゴリ管理</summary>
+        <div>
+          <div id="masterRedirectCategoryList"></div>
+          <div class="master-add-row">
+            <input id="newRedirectCategoryName" type="text" placeholder="新しいカテゴリ名">
+            <input id="newRedirectCategoryColor" type="color" value="#6b7280" style="width:36px;height:28px;padding:0;border:1px solid var(--line);border-radius:4px;cursor:pointer;">
+            <button type="button" id="addRedirectCategoryBtn">追加</button>
+          </div>
+        </div>
+      </details>
       <section class="card table-card">
         <div class="table-headline">
           <h2 class="card-title">URL管理</h2>
@@ -1530,30 +1541,35 @@
       </section>
 
       <div id="redirectModal" class="modal-overlay" role="dialog" aria-modal="true">
-        <form id="redirectForm" class="modal-content" style="max-width:600px;">
-          <h2 id="redirectModalTitle">URL追加</h2>
-          <div class="form-field">
-            <label for="redirectKeyInput">key</label>
-            <input id="redirectKeyInput" name="key" type="text" required placeholder="sbc-ondalift">
+        <section class="card modal-card">
+          <div class="modal-header">
+            <h2 id="redirectModalTitle" class="modal-title">URL追加</h2>
+            <button class="close-btn" type="button" aria-label="閉じる" onclick="closeRedirectModal()">×</button>
           </div>
-          <div class="form-field">
-            <label for="redirectUrlInput">リダイレクト先URL</label>
-            <input id="redirectUrlInput" name="url" type="text" placeholder="https://...">
-          </div>
-          <div class="form-field">
-            <label for="redirectCategoryInput">カテゴリ</label>
-            <input id="redirectCategoryInput" name="category" type="text" required placeholder="ondalift">
-          </div>
-          <div class="form-field full">
-            <label for="redirectNotesInput">備考</label>
-            <input id="redirectNotesInput" name="notes" type="text" placeholder="404、リンク無し等">
-          </div>
-          <input id="redirectEditId" type="hidden" value="">
-          <div class="form-actions">
-            <button class="btn-secondary" type="button" onclick="closeRedirectModal()">キャンセル</button>
-            <button id="saveRedirectButton" class="btn-primary" type="submit">保存</button>
-          </div>
-        </form>
+          <form id="redirectForm" class="form-grid">
+            <div class="form-field">
+              <label for="redirectKeyInput">key</label>
+              <input id="redirectKeyInput" name="key" type="text" required placeholder="sbc-ondalift">
+            </div>
+            <div class="form-field">
+              <label for="redirectCategoryInput">カテゴリ</label>
+              <select id="redirectCategoryInput" name="category" required><option value="">-- 選択 --</option></select>
+            </div>
+            <div class="form-field full">
+              <label for="redirectUrlInput">リダイレクト先URL</label>
+              <input id="redirectUrlInput" name="url" type="text" placeholder="https://...">
+            </div>
+            <div class="form-field full">
+              <label for="redirectNotesInput">備考</label>
+              <input id="redirectNotesInput" name="notes" type="text" placeholder="404、リンク無し等">
+            </div>
+            <input id="redirectEditId" type="hidden" value="">
+            <div class="form-actions">
+              <button class="btn-secondary" type="button" onclick="closeRedirectModal()">キャンセル</button>
+              <button id="saveRedirectButton" class="btn-primary" type="submit">保存</button>
+            </div>
+          </form>
+        </section>
       </div>
     </section>
 
@@ -2183,6 +2199,7 @@
       audits: [],
       auditsLoaded: false,
       redirectUrls: [],
+      redirectCategories: [],
       redirectsLoaded: false
     };
 
@@ -4583,11 +4600,20 @@
     // ============================================================
 
     async function loadRedirects() {
-      const { data, error } = await db.from('redirect_urls').select('*').order('category').order('key');
-      if (error) { showNotice('URL読み込み失敗: ' + error.message, 'error'); return; }
-      state.redirectUrls = data || [];
+      const [urlRes, catRes] = await Promise.all([
+        db.from('redirect_urls').select('*').order('category').order('key'),
+        db.from('master_redirect_categories').select('*').order('sort_order')
+      ]);
+      if (urlRes.error) { showNotice('URL読み込み失敗: ' + urlRes.error.message, 'error'); return; }
+      state.redirectUrls = urlRes.data || [];
+      state.redirectCategories = catRes.data || [];
       state.redirectsLoaded = true;
       renderRedirectsTab();
+    }
+
+    function getRedirectCategoryColor(name) {
+      const cat = state.redirectCategories.find(c => c.name === name);
+      return cat ? cat.color : '#6b7280';
     }
 
     function renderRedirectsTab() {
@@ -4601,12 +4627,27 @@
       const warnCount = items.filter(r => (r.notes || '').match(/404|リンク無し/)).length;
       document.getElementById('redirect404Count').textContent = warnCount;
 
-      // カテゴリフィルター
+      // カテゴリフィルター（マスタ順）
       const catFilter = document.getElementById('redirectCategoryFilter');
       const curCat = catFilter.value;
-      const catOpts = [...cats].sort().map(c => `<option value="${c}">${c}</option>`).join('');
+      const masterCats = state.redirectCategories.map(c => c.name);
+      const unmapped = [...cats].filter(c => !masterCats.includes(c)).sort();
+      const allCats = [...masterCats, ...unmapped];
+      const catOpts = allCats.filter(c => cats.has(c)).map(c => `<option value="${c}">${c}</option>`).join('');
       catFilter.innerHTML = '<option value="">全カテゴリ</option>' + catOpts;
       catFilter.value = curCat;
+
+      // マスタ管理リスト
+      renderRedirectCategoryMaster();
+
+      // モーダルのカテゴリselect更新
+      const modalSel = document.getElementById('redirectCategoryInput');
+      const modalCur = modalSel.value;
+      modalSel.innerHTML = '<option value="">-- 選択 --</option>' +
+        state.redirectCategories.map(c =>
+          `<option value="${c.name}">${c.name}</option>`
+        ).join('');
+      modalSel.value = modalCur;
 
       // ディレクトリ列ヘッダー（既存のdir列を削除して再生成）
       const headerRow = document.getElementById('redirectHeaderRow');
@@ -4655,7 +4696,7 @@
           <td class="redirect-editable" data-field="key" style="position:sticky;left:0;z-index:var(--z-sticky-col);background:${hasWarning ? '#fef2f2' : '#fff'};font-weight:500;font-size:13px;cursor:pointer;">
             ${escapeHtml(r.key)}
           </td>
-          <td class="redirect-editable" data-field="category" style="cursor:pointer;"><span class="badge" style="font-size:11px;">${escapeHtml(r.category)}</span></td>
+          <td class="redirect-editable" data-field="category" style="cursor:pointer;"><span class="badge" style="font-size:11px;background:${getRedirectCategoryColor(r.category)};color:#fff;">${escapeHtml(r.category)}</span></td>
           <td class="redirect-editable" data-field="url" style="font-size:11px;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;" title="${escapeHtml(r.url || '')}">
             ${r.url ? escapeHtml(r.url) : '<span style="color:var(--muted);">—</span>'}
           </td>
@@ -4682,36 +4723,59 @@
         return;
       }
       const cell = e.target.closest('.redirect-editable');
-      if (cell && !cell.querySelector('input')) {
+      if (cell && !cell.querySelector('input') && !cell.querySelector('select')) {
         const tr = cell.closest('tr');
         const id = tr.dataset.redirectId;
         const field = cell.dataset.field;
         const r = state.redirectUrls.find(x => x.id === id);
         if (!r) return;
         const oldVal = r[field] || '';
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.value = oldVal;
-        input.style.cssText = 'width:100%;font-size:12px;padding:2px 4px;border:1px solid var(--primary);border-radius:3px;outline:none;box-sizing:border-box;';
-        cell.textContent = '';
-        cell.appendChild(input);
-        input.focus();
-        input.select();
-        const save = async () => {
-          const newVal = input.value.trim();
-          if (newVal === oldVal) { renderRedirectsTab(); return; }
-          const payload = { [field]: newVal || null, updated_at: new Date().toISOString() };
-          const { error } = await db.from('redirect_urls').update(payload).eq('id', id);
-          if (error) { showNotice('更新失敗: ' + error.message, 'error'); renderRedirectsTab(); return; }
-          r[field] = newVal || null;
-          renderRedirectsTab();
-          showNotice('更新しました');
-        };
-        input.addEventListener('blur', save);
-        input.addEventListener('keydown', (ev) => {
-          if (ev.key === 'Enter') { ev.preventDefault(); input.blur(); }
-          if (ev.key === 'Escape') { renderRedirectsTab(); }
-        });
+
+        if (field === 'category') {
+          const sel = document.createElement('select');
+          sel.style.cssText = 'width:100%;font-size:12px;padding:2px 4px;border:1px solid var(--primary);border-radius:3px;outline:none;';
+          sel.innerHTML = state.redirectCategories.map(c =>
+            `<option value="${c.name}"${c.name === oldVal ? ' selected' : ''}>${c.name}</option>`
+          ).join('');
+          cell.textContent = '';
+          cell.appendChild(sel);
+          sel.focus();
+          const saveSel = async () => {
+            const newVal = sel.value;
+            if (newVal === oldVal) { renderRedirectsTab(); return; }
+            const { error } = await db.from('redirect_urls').update({ category: newVal, updated_at: new Date().toISOString() }).eq('id', id);
+            if (error) { showNotice('更新失敗: ' + error.message, 'error'); renderRedirectsTab(); return; }
+            r.category = newVal;
+            renderRedirectsTab();
+            showNotice('更新しました');
+          };
+          sel.addEventListener('change', saveSel);
+          sel.addEventListener('blur', () => renderRedirectsTab());
+        } else {
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.value = oldVal;
+          input.style.cssText = 'width:100%;font-size:12px;padding:2px 4px;border:1px solid var(--primary);border-radius:3px;outline:none;box-sizing:border-box;';
+          cell.textContent = '';
+          cell.appendChild(input);
+          input.focus();
+          input.select();
+          const save = async () => {
+            const newVal = input.value.trim();
+            if (newVal === oldVal) { renderRedirectsTab(); return; }
+            const payload = { [field]: newVal || null, updated_at: new Date().toISOString() };
+            const { error } = await db.from('redirect_urls').update(payload).eq('id', id);
+            if (error) { showNotice('更新失敗: ' + error.message, 'error'); renderRedirectsTab(); return; }
+            r[field] = newVal || null;
+            renderRedirectsTab();
+            showNotice('更新しました');
+          };
+          input.addEventListener('blur', save);
+          input.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Enter') { ev.preventDefault(); input.blur(); }
+            if (ev.key === 'Escape') { renderRedirectsTab(); }
+          });
+        }
       }
     });
 
@@ -4759,6 +4823,61 @@
       closeRedirectModal();
       showNotice(editId ? 'URLを更新しました' : 'URLを追加しました');
       await loadRedirects();
+    });
+
+    function renderRedirectCategoryMaster() {
+      const container = document.getElementById('masterRedirectCategoryList');
+      if (!container) return;
+      container.innerHTML = '';
+      state.redirectCategories.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'master-row';
+        row.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:4px;';
+        row.innerHTML = `
+          <input type="color" value="${item.color}" data-cat-id="${item.id}" class="redirect-cat-color"
+            style="width:24px;height:24px;padding:0;border:1px solid var(--line);border-radius:3px;cursor:pointer;">
+          <span style="flex:1;font-size:0.8rem;">
+            <span class="badge" style="background:${item.color};color:#fff;font-size:11px;">${escapeHtml(item.name)}</span>
+          </span>
+          <button type="button" class="delete-redirect-cat" data-id="${item.id}" style="font-size:11px;background:none;border:1px solid var(--line);border-radius:3px;padding:1px 6px;cursor:pointer;color:var(--muted);">削除</button>`;
+        container.appendChild(row);
+      });
+    }
+
+    document.getElementById('masterRedirectCategoryList').addEventListener('click', async (e) => {
+      const delBtn = e.target.closest('.delete-redirect-cat');
+      if (delBtn) {
+        const { error } = await db.from('master_redirect_categories').delete().eq('id', delBtn.dataset.id);
+        if (error) { showNotice('削除失敗: ' + error.message, 'error'); return; }
+        await loadRedirects();
+      }
+    });
+
+    document.getElementById('masterRedirectCategoryList').addEventListener('change', async (e) => {
+      const colorInput = e.target.closest('.redirect-cat-color');
+      if (colorInput) {
+        const { error } = await db.from('master_redirect_categories').update({ color: colorInput.value }).eq('id', colorInput.dataset.catId);
+        if (error) { showNotice('色変更失敗: ' + error.message, 'error'); return; }
+        const cat = state.redirectCategories.find(c => c.id === colorInput.dataset.catId);
+        if (cat) cat.color = colorInput.value;
+        renderRedirectsTab();
+      }
+    });
+
+    document.getElementById('addRedirectCategoryBtn').addEventListener('click', async () => {
+      const nameInput = document.getElementById('newRedirectCategoryName');
+      const colorInput = document.getElementById('newRedirectCategoryColor');
+      const name = nameInput.value.trim();
+      if (!name) return;
+      const maxSort = state.redirectCategories.reduce((m, c) => Math.max(m, c.sort_order || 0), 0);
+      const { error } = await db.from('master_redirect_categories').insert({ name, color: colorInput.value, sort_order: maxSort + 1 });
+      if (error) { showNotice('追加失敗: ' + error.message, 'error'); return; }
+      nameInput.value = '';
+      await loadRedirects();
+    });
+
+    document.getElementById('newRedirectCategoryName').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); document.getElementById('addRedirectCategoryBtn').click(); }
     });
 
     document.getElementById('addRedirectButton').addEventListener('click', openRedirectModal);
