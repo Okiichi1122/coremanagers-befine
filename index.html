@@ -1549,7 +1549,6 @@
                 <th class="sortable" data-rsort="category" style="min-width:120px;cursor:pointer;">カテゴリ</th>
                 <th style="min-width:200px;">リダイレクト先URL</th>
                 <th class="sortable" data-rsort="notes" style="min-width:120px;cursor:pointer;">備考</th>
-                <th class="redirect-edit-only" style="width:40px;"></th>
               </tr>
             </thead>
             <tbody id="redirectRows"></tbody>
@@ -4762,8 +4761,9 @@
           '<td class="redirect-editable" data-field="category" style="' + (readOnly ? '' : 'cursor:pointer;') + '"><span class="badge" style="font-size:11px;background:' + getRedirectCategoryColor(r.category) + ';color:#fff;">' + escapeHtml(r.category) + '</span></td>' +
           '<td class="redirect-editable" data-field="url" style="font-size:11px;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' + (readOnly ? '' : 'cursor:pointer;') + '" title="' + escapeHtml(r.url || '') + '">' + (r.url ? escapeHtml(r.url) : '<span style="color:var(--muted);">—</span>') + '</td>' +
           '<td class="redirect-editable" data-field="notes" style="font-size:12px;color:var(--muted);' + (readOnly ? '' : 'cursor:pointer;') + '">' + escapeHtml(r.notes || '') + '</td>' +
+          dirCells +
           (readOnly ? '' : '<td><button type="button" class="delete-redirect-row" data-id="' + r.id + '" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:13px;" title="削除">✕</button></td>') +
-          dirCells + '</tr>';
+          '</tr>';
       }).join('');
     }
 
