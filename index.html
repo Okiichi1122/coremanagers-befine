@@ -980,6 +980,7 @@
       <button class="tab-button" type="button" data-tab="workflow">工程別ビュー</button>
       <button class="tab-button" type="button" data-tab="workers">ライター管理</button>
       <button class="tab-button" type="button" data-tab="audit">情報監査</button>
+      <button class="tab-button" type="button" data-tab="redirects">URL管理</button>
       <button class="tab-button" type="button" data-tab="users" id="usersTabButton" style="display:none;">ユーザー管理</button>
     </nav>
 
@@ -1126,6 +1127,8 @@
                 <th class="sortable" data-sort="release_date">リリース日</th>
                 <th class="sortable" data-sort="no1_client">No.1クライアント</th>
                 <th>季節訴求</th>
+                <th>CTA差替</th>
+                <th>アンカー差替</th>
                 <th>アンケート</th>
                 <th>アンケートURL</th>
                 <th>FIGMA</th>
@@ -1493,6 +1496,68 @@
       </section>
     </section>
 
+    <section id="redirectsTab" class="tab-panel stack hidden-panel">
+      <section class="kpi-grid" aria-label="URL管理KPI">
+        <div class="kpi-card"><span class="kpi-value" id="redirectTotalCount">0</span><span class="kpi-label">全URL数</span></div>
+        <div class="kpi-card"><span class="kpi-value" id="redirectCategoryCount">0</span><span class="kpi-label">カテゴリ数</span></div>
+        <div class="kpi-card"><span class="kpi-value" id="redirect404Count">0</span><span class="kpi-label">404 / リンク無し</span></div>
+      </section>
+      <section class="card table-card">
+        <div class="table-headline">
+          <h2 class="card-title">URL管理</h2>
+          <div class="table-actions">
+            <input id="redirectSearchInput" type="search" placeholder="key / URL / 備考で検索" style="width:200px;">
+            <select id="redirectCategoryFilter"><option value="">全カテゴリ</option></select>
+            <button id="addRedirectButton" class="btn-primary" type="button">＋ URL追加</button>
+            <button id="refreshRedirectsButton" class="btn-secondary" type="button">更新</button>
+          </div>
+        </div>
+        <p style="margin:0 0 0.5rem;color:var(--muted);font-size:12px;">各ディレクトリの完成URLをクリックでコピーできます。</p>
+        <div id="redirectEmptyState" class="empty-state hidden">URLが登録されていません。</div>
+        <div class="table-wrap" style="max-height:70vh;">
+          <table aria-label="URL管理一覧" id="redirectTable">
+            <thead>
+              <tr>
+                <th style="min-width:180px;position:sticky;left:0;z-index:var(--z-sticky-header);background:#fff;">key</th>
+                <th style="min-width:120px;">カテゴリ</th>
+                <th style="min-width:200px;">リダイレクト先URL</th>
+                <th style="min-width:120px;">備考</th>
+                <th id="redirectDirHeaders"></th>
+              </tr>
+            </thead>
+            <tbody id="redirectRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <div id="redirectModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+        <form id="redirectForm" class="modal-content" style="max-width:600px;">
+          <h2 id="redirectModalTitle">URL追加</h2>
+          <div class="form-field">
+            <label for="redirectKeyInput">key</label>
+            <input id="redirectKeyInput" name="key" type="text" required placeholder="sbc-ondalift">
+          </div>
+          <div class="form-field">
+            <label for="redirectUrlInput">リダイレクト先URL</label>
+            <input id="redirectUrlInput" name="url" type="text" placeholder="https://...">
+          </div>
+          <div class="form-field">
+            <label for="redirectCategoryInput">カテゴリ</label>
+            <input id="redirectCategoryInput" name="category" type="text" required placeholder="ondalift">
+          </div>
+          <div class="form-field full">
+            <label for="redirectNotesInput">備考</label>
+            <input id="redirectNotesInput" name="notes" type="text" placeholder="404、リンク無し等">
+          </div>
+          <input id="redirectEditId" type="hidden" value="">
+          <div class="form-actions">
+            <button class="btn-secondary" type="button" onclick="closeRedirectModal()">キャンセル</button>
+            <button id="saveRedirectButton" class="btn-primary" type="submit">保存</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
     <section id="usersTab" class="tab-panel stack hidden-panel">
       <section class="card table-card">
         <div class="table-headline">
@@ -1691,6 +1756,20 @@
           <input id="createImageFolderUrl" name="image_folder_url" type="url" placeholder="https://...">
         </div>
         <div class="form-field">
+          <label for="createCtaReplacement">CTA差替</label>
+          <select id="createCtaReplacement" name="cta_replacement">
+            <option value="未対応">未対応</option>
+            <option value="完了">完了</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="createAnchorReplacement">アンカー差替</label>
+          <select id="createAnchorReplacement" name="anchor_replacement">
+            <option value="未対応">未対応</option>
+            <option value="完了">完了</option>
+          </select>
+        </div>
+        <div class="form-field">
           <label for="createSurveyStatus">アンケート準備</label>
           <select id="createSurveyStatus" name="survey_status">
             <option value="未完了">未完了</option>
@@ -1813,6 +1892,20 @@
         <div class="form-field">
           <label for="editImageFolderUrl">画像フォルダURL</label>
           <input id="editImageFolderUrl" name="image_folder_url" type="url" placeholder="https://...">
+        </div>
+        <div class="form-field">
+          <label for="editCtaReplacement">CTA差替</label>
+          <select id="editCtaReplacement" name="cta_replacement">
+            <option value="未対応">未対応</option>
+            <option value="完了">完了</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="editAnchorReplacement">アンカー差替</label>
+          <select id="editAnchorReplacement" name="anchor_replacement">
+            <option value="未対応">未対応</option>
+            <option value="完了">完了</option>
+          </select>
         </div>
         <div class="form-field">
           <label for="editSurveyStatus">アンケート準備</label>
@@ -2013,6 +2106,46 @@
     const SUPABASE_URL = 'https://hwfbpissyywzqbdthpek.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_kzzmDG971X8Vvr2w_RPsPw_MW-o_104';
     const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // 共通クリニック情報DB（coremanagers project）
+    const COMMON_SUPABASE_URL = 'https://onckbthgxzqlayuhobfs.supabase.co';
+    const COMMON_SUPABASE_KEY = 'sb_publishable_lMT_pb4FwP4kdKbXlx5h-w_wOTuKNg9';
+    const COMMON_WRITE_TOKEN = 'i2z8gMrGCKurqN07PtXWP_L-ixkme-x9_iyv3T-Ncj0';
+    const commonDb = window.supabase.createClient(COMMON_SUPABASE_URL, COMMON_SUPABASE_KEY);
+
+    // 共通DB書き込みヘルパー
+    const clinicApi = {
+      async upsertSnapshot(clinicName, category, data, sourceUrl = null, snapshotDate = null) {
+        const { data: id, error } = await commonDb.rpc('upsert_clinic_snapshot', {
+          p_token: COMMON_WRITE_TOKEN, p_clinic_name: clinicName, p_category: category,
+          p_data: data, p_source_url: sourceUrl, p_snapshot_date: snapshotDate
+        });
+        if (error) throw error;
+        return id;
+      },
+      async insertChange(clinicName, category, changeType, oldVal, newVal, importance = '中') {
+        const { data: id, error } = await commonDb.rpc('insert_clinic_change', {
+          p_token: COMMON_WRITE_TOKEN, p_clinic_name: clinicName, p_category: category,
+          p_change_type: changeType, p_old_value: oldVal, p_new_value: newVal, p_importance: importance
+        });
+        if (error) throw error;
+        return id;
+      },
+      async acknowledgeChange(changeId) {
+        const { data: ok, error } = await commonDb.rpc('acknowledge_clinic_change', {
+          p_token: COMMON_WRITE_TOKEN, p_id: changeId
+        });
+        if (error) throw error;
+        return ok;
+      },
+      async batchUpsertSnapshots(rows) {
+        const { data: count, error } = await commonDb.rpc('batch_upsert_clinic_snapshots', {
+          p_token: COMMON_WRITE_TOKEN, p_rows: rows
+        });
+        if (error) throw error;
+        return count;
+      }
+    };
     const AUTH_BYPASS = false;
 
     /*
@@ -2028,6 +2161,7 @@
       workflow: '#workflow',
       workers: '#workers',
       audit: '#audit',
+      redirects: '#redirects',
       users: '#users'
     };
 
@@ -2048,7 +2182,9 @@
       userRole: null,
       appUsers: [],
       audits: [],
-      auditsLoaded: false
+      auditsLoaded: false,
+      redirectUrls: [],
+      redirectsLoaded: false
     };
 
     const els = {
@@ -2222,6 +2358,8 @@
         release_date: String(data.get('release_date') || '').trim() || null,
         release_status: String(data.get('release_status') || '記事完了待ち').trim(),
         seasonal_appeal: String(data.get('seasonal_appeal') || 'なし').trim(),
+        cta_replacement: String(data.get('cta_replacement') || '未対応').trim(),
+        anchor_replacement: String(data.get('anchor_replacement') || '未対応').trim(),
         figma_url: String(data.get('figma_url') || '').trim() || null,
         image_folder_url: String(data.get('image_folder_url') || '').trim() || null,
         survey_status: String(data.get('survey_status') || '未完了').trim(),
@@ -2660,6 +2798,8 @@
           <td data-field="release_date">${escapeHtml(article.release_date || '')}</td>
           <td data-field="no1_client">${clientBadge(article.no1_client)}</td>
           <td data-field="seasonal_appeal">${escapeHtml(article.seasonal_appeal || 'なし')}</td>
+          <td data-field="cta_replacement">${escapeHtml(article.cta_replacement || '未対応')}</td>
+          <td data-field="anchor_replacement">${escapeHtml(article.anchor_replacement || '未対応')}</td>
           <td data-field="survey_status">${surveyLabel}</td>
           <td data-field="survey_url" class="url-cell">${article.survey_url ? `<a href="${escapeHtml(safeHref(article.survey_url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(article.survey_url)}</a>` : ''}</td>
           <td data-field="figma_url" class="url-cell">${article.figma_url ? `<a href="${escapeHtml(safeHref(article.figma_url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(article.figma_url)}</a>` : ''}</td>
@@ -2698,10 +2838,10 @@
     // --- CSV Export ---
     function exportArticlesCsv() {
       const rows = filteredArticles();
-      const headers = ['記事ID','タイトル','URL','下書きURL','KW','ジャンル','記事カテゴリ','ステータス','リリース','リリース日','No.1クライアント','季節訴求','禁止KW','アンケート','備考'];
+      const headers = ['記事ID','タイトル','URL','下書きURL','KW','ジャンル','記事カテゴリ','ステータス','リリース','リリース日','No.1クライアント','季節訴求','CTA差替','アンカー差替','禁止KW','アンケート','備考'];
       const csvRows = [headers.join(',')];
       rows.forEach(a => {
-        const cols = [a.id, a.title||'', a.url||'', a.draft_url||'', a.keyword||'', articleGenre(a), a.category||'', normalizeStatus(a.status), computeReleaseStatus(a), a.release_date||'', a.no1_client||'', a.seasonal_appeal||'', a.banned_keywords||'', a.survey_status||'', getArticleNotes(a)];
+        const cols = [a.id, a.title||'', a.url||'', a.draft_url||'', a.keyword||'', articleGenre(a), a.category||'', normalizeStatus(a.status), computeReleaseStatus(a), a.release_date||'', a.no1_client||'', a.seasonal_appeal||'', a.cta_replacement||'未対応', a.anchor_replacement||'未対応', a.banned_keywords||'', a.survey_status||'', getArticleNotes(a)];
         csvRows.push(cols.map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
       });
       const blob = new Blob(['\uFEFF' + csvRows.join('\n')], { type: 'text/csv;charset=utf-8' });
@@ -2879,7 +3019,9 @@
       status: ['公開中', '執筆中', '下書き', '公開停止中', '作成中止'],
       release_status: ['記事完了待ち', 'リリース可能', 'リリース済', 'リライト中', '保留'],
       seasonal_appeal: ['なし', 'あり'],
-      survey_status: ['未完了', '完了', '不要']
+      survey_status: ['未完了', '完了', '不要'],
+      cta_replacement: ['未対応', '完了'],
+      anchor_replacement: ['未対応', '完了']
     };
     const INLINE_DATE_FIELDS = ['release_date'];
     const INLINE_SKIP_FIELDS = [];
@@ -3672,7 +3814,12 @@
       document.getElementById('workflowTab').classList.toggle('hidden-panel', nextTab !== 'workflow');
       els.workersTab.classList.toggle('hidden-panel', nextTab !== 'workers');
       els.auditTab.classList.toggle('hidden-panel', nextTab !== 'audit');
+      document.getElementById('redirectsTab').classList.toggle('hidden-panel', nextTab !== 'redirects');
       document.getElementById('usersTab').classList.toggle('hidden-panel', nextTab !== 'users');
+      if (nextTab === 'redirects') {
+        if (state.redirectsLoaded) renderRedirectsTab();
+        else loadRedirects();
+      }
       if (nextTab === 'users' && isAdmin()) loadAppUsers();
       if (nextTab === 'rewrite') renderRewriteTab();
       if (nextTab === 'workflow') renderWorkflowTab();
@@ -4055,6 +4202,8 @@
       document.getElementById('editReleaseDate').value = article.release_date || '';
       document.getElementById('editReleaseStatus').value = article.release_status || '記事完了待ち';
       document.getElementById('editSeasonalAppeal').value = article.seasonal_appeal || 'なし';
+      document.getElementById('editCtaReplacement').value = article.cta_replacement || '未対応';
+      document.getElementById('editAnchorReplacement').value = article.anchor_replacement || '未対応';
       document.getElementById('editFigmaUrl').value = article.figma_url || '';
       document.getElementById('editImageFolderUrl').value = article.image_folder_url || '';
       document.getElementById('editSurveyStatus').value = article.survey_status || '未完了';
