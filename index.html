@@ -4579,6 +4579,158 @@
       }
     }
 
+    // ============================================================
+    // URL管理タブ
+    // ============================================================
+
+    async function loadRedirects() {
+      const { data, error } = await db.from('redirect_urls').select('*').order('category').order('key');
+      if (error) { showNotice('URL読み込み失敗: ' + error.message, 'error'); return; }
+      state.redirectUrls = data || [];
+      state.redirectsLoaded = true;
+      renderRedirectsTab();
+    }
+
+    function renderRedirectsTab() {
+      const items = state.redirectUrls;
+      const dirs = (state.directories || []).map(d => d.name);
+
+      // KPI
+      document.getElementById('redirectTotalCount').textContent = items.length;
+      const cats = new Set(items.map(r => r.category));
+      document.getElementById('redirectCategoryCount').textContent = cats.size;
+      const warnCount = items.filter(r => (r.notes || '').match(/404|リンク無し/)).length;
+      document.getElementById('redirect404Count').textContent = warnCount;
+
+      // カテゴリフィルター
+      const catFilter = document.getElementById('redirectCategoryFilter');
+      const curCat = catFilter.value;
+      const catOpts = [...cats].sort().map(c => `<option value="${c}">${c}</option>`).join('');
+      catFilter.innerHTML = '<option value="">全カテゴリ</option>' + catOpts;
+      catFilter.value = curCat;
+
+      // ディレクトリ列ヘッダー
+      const dirTh = document.getElementById('redirectDirHeaders');
+      dirTh.outerHTML = dirs.map(d =>
+        `<th style="min-width:140px;font-size:11px;white-space:nowrap;">${escapeHtml(d)}</th>`
+      ).join('');
+
+      // フィルター適用
+      const searchVal = (document.getElementById('redirectSearchInput').value || '').toLowerCase();
+      const catVal = catFilter.value;
+      const filtered = items.filter(r => {
+        if (catVal && r.category !== catVal) return false;
+        if (searchVal) {
+          const hay = (r.key + ' ' + (r.url || '') + ' ' + (r.notes || '')).toLowerCase();
+          if (!hay.includes(searchVal)) return false;
+        }
+        return true;
+      });
+
+      const tbody = document.getElementById('redirectRows');
+      if (!filtered.length) {
+        document.getElementById('redirectEmptyState').classList.remove('hidden');
+        tbody.innerHTML = '';
+        return;
+      }
+      document.getElementById('redirectEmptyState').classList.add('hidden');
+
+      tbody.innerHTML = filtered.map(r => {
+        const hasWarning = (r.notes || '').match(/404|リンク無し/);
+        const rowStyle = hasWarning ? 'background:rgba(239,68,68,0.05);' : '';
+        const dirCells = dirs.map(d => {
+          const fullUrl = `https://befine-clinic.jp/${d}/clinic-detail?param=${r.key}`;
+          return `<td style="font-size:11px;">
+            <button type="button" class="copy-dir-url-btn" data-url="${escapeHtml(fullUrl)}"
+              style="background:none;border:1px solid var(--line);border-radius:4px;padding:2px 6px;cursor:pointer;font-size:11px;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;"
+              title="${escapeHtml(fullUrl)}">コピー</button>
+          </td>`;
+        }).join('');
+
+        return `<tr style="${rowStyle}" data-redirect-id="${r.id}">
+          <td style="position:sticky;left:0;z-index:var(--z-sticky-col);background:${hasWarning ? 'rgba(239,68,68,0.05)' : '#fff'};font-weight:500;font-size:13px;">
+            <span style="cursor:pointer;" onclick="openRedirectEditModal('${r.id}')">${escapeHtml(r.key)}</span>
+          </td>
+          <td><span class="badge" style="font-size:11px;">${escapeHtml(r.category)}</span></td>
+          <td style="font-size:11px;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(r.url || '')}">
+            ${r.url ? `<a href="${escapeHtml(r.url)}" target="_blank" rel="noopener" style="color:var(--primary);">${escapeHtml(r.url)}</a>` : '<span style="color:var(--muted);">—</span>'}
+          </td>
+          <td style="font-size:12px;color:${hasWarning ? '#ef4444' : 'var(--muted)'};">${escapeHtml(r.notes || '')}</td>
+          ${dirCells}
+        </tr>`;
+      }).join('');
+    }
+
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        showNotice('コピーしました', 'success');
+      }).catch(() => {
+        showNotice('コピー失敗', 'error');
+      });
+    }
+
+    document.getElementById('redirectTable').addEventListener('click', (e) => {
+      const btn = e.target.closest('.copy-dir-url-btn');
+      if (btn) {
+        copyToClipboard(btn.dataset.url);
+        btn.textContent = '✓';
+        setTimeout(() => { btn.textContent = 'コピー'; }, 1500);
+      }
+    });
+
+    function openRedirectModal() {
+      document.getElementById('redirectEditId').value = '';
+      document.getElementById('redirectModalTitle').textContent = 'URL追加';
+      document.getElementById('redirectForm').reset();
+      document.getElementById('redirectModal').classList.remove('hidden');
+    }
+
+    function openRedirectEditModal(id) {
+      const r = state.redirectUrls.find(x => x.id === id);
+      if (!r) return;
+      document.getElementById('redirectEditId').value = r.id;
+      document.getElementById('redirectModalTitle').textContent = 'URL編集';
+      document.getElementById('redirectKeyInput').value = r.key;
+      document.getElementById('redirectUrlInput').value = r.url || '';
+      document.getElementById('redirectCategoryInput').value = r.category;
+      document.getElementById('redirectNotesInput').value = r.notes || '';
+      document.getElementById('redirectModal').classList.remove('hidden');
+    }
+
+    function closeRedirectModal() {
+      document.getElementById('redirectModal').classList.add('hidden');
+    }
+
+    document.getElementById('redirectForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const payload = {
+        key: fd.get('key').trim(),
+        url: fd.get('url').trim() || null,
+        category: fd.get('category').trim(),
+        notes: fd.get('notes').trim() || null,
+        updated_at: new Date().toISOString()
+      };
+      const editId = document.getElementById('redirectEditId').value;
+      let error;
+      if (editId) {
+        ({ error } = await db.from('redirect_urls').update(payload).eq('id', editId));
+      } else {
+        ({ error } = await db.from('redirect_urls').insert(payload));
+      }
+      if (error) { showNotice('保存失敗: ' + error.message, 'error'); return; }
+      closeRedirectModal();
+      showNotice(editId ? 'URLを更新しました' : 'URLを追加しました');
+      await loadRedirects();
+    });
+
+    document.getElementById('addRedirectButton').addEventListener('click', openRedirectModal);
+    document.getElementById('refreshRedirectsButton').addEventListener('click', loadRedirects);
+    document.getElementById('redirectSearchInput').addEventListener('input', renderRedirectsTab);
+    document.getElementById('redirectCategoryFilter').addEventListener('change', renderRedirectsTab);
+
+    // ============================================================
+
     els.loginButton.addEventListener('click', signIn);
     els.signOutButton.addEventListener('click', signOut);
     els.tabButtons.forEach((button) => {
