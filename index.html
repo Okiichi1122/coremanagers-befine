@@ -1517,12 +1517,11 @@
         <div class="table-wrap" style="max-height:70vh;">
           <table aria-label="URL管理一覧" id="redirectTable">
             <thead>
-              <tr>
+              <tr id="redirectHeaderRow">
                 <th style="min-width:180px;position:sticky;left:0;z-index:var(--z-sticky-header);background:#fff;">key</th>
                 <th style="min-width:120px;">カテゴリ</th>
                 <th style="min-width:200px;">リダイレクト先URL</th>
                 <th style="min-width:120px;">備考</th>
-                <th id="redirectDirHeaders"></th>
               </tr>
             </thead>
             <tbody id="redirectRows"></tbody>
@@ -4609,11 +4608,16 @@
       catFilter.innerHTML = '<option value="">全カテゴリ</option>' + catOpts;
       catFilter.value = curCat;
 
-      // ディレクトリ列ヘッダー
-      const dirTh = document.getElementById('redirectDirHeaders');
-      dirTh.outerHTML = dirs.map(d =>
-        `<th style="min-width:140px;font-size:11px;white-space:nowrap;">${escapeHtml(d)}</th>`
-      ).join('');
+      // ディレクトリ列ヘッダー（既存のdir列を削除して再生成）
+      const headerRow = document.getElementById('redirectHeaderRow');
+      headerRow.querySelectorAll('.dir-header').forEach(th => th.remove());
+      dirs.forEach(d => {
+        const th = document.createElement('th');
+        th.className = 'dir-header';
+        th.style.cssText = 'min-width:140px;font-size:11px;white-space:nowrap;';
+        th.textContent = d;
+        headerRow.appendChild(th);
+      });
 
       // フィルター適用
       const searchVal = (document.getElementById('redirectSearchInput').value || '').toLowerCase();
