@@ -742,6 +742,62 @@
       background: #f8fafc !important;
     }
 
+    #redirectRows tr.redirect-row {
+      cursor: pointer;
+    }
+
+    #redirectRows tr.redirect-row:hover {
+      background: #f8fafc;
+    }
+
+    #redirectRows tr.redirect-row:hover .redirect-sticky-cell {
+      background: #f8fafc !important;
+    }
+
+    #redirectRows .redirect-sticky-cell {
+      background: #fff !important;
+    }
+
+    #redirectRows .redirect-sticky-select {
+      position: sticky;
+      left: 0;
+      z-index: var(--z-sticky-col);
+    }
+
+    #redirectRows .redirect-sticky-key {
+      position: sticky;
+      left: 36px;
+      z-index: var(--z-sticky-col);
+      font-weight: 600;
+    }
+
+    #redirectRows .redirect-url-cell {
+      max-width: 250px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    #redirectRows .redirect-notes-cell {
+      color: var(--muted);
+    }
+
+    #redirectRows .copy-dir-url-btn {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 4px 12px;
+      background: transparent;
+      color: #334155;
+      cursor: pointer;
+      font-size: 13px;
+      line-height: 1.45;
+      white-space: nowrap;
+    }
+
+    #redirectRows .copy-dir-url-btn:hover {
+      background: #f1f5f9;
+    }
+
     th.sortable {
       cursor: pointer;
       user-select: none;
@@ -1502,14 +1558,17 @@
         <div class="kpi-card"><span class="kpi-value" id="redirectCategoryCount">0</span><span class="kpi-label">カテゴリ数</span></div>
         <div class="kpi-card"><span class="kpi-value" id="redirect404Count">0</span><span class="kpi-label">404 / リンク無し</span></div>
       </section>
-      <details class="master-section">
+      <details class="master-section" id="redirectMasterSection">
         <summary>URLカテゴリ管理</summary>
-        <div>
-          <div id="masterRedirectCategoryList"></div>
-          <div class="master-add-row">
-            <input id="newRedirectCategoryName" type="text" placeholder="新しいカテゴリ名">
-            <input id="newRedirectCategoryColor" type="color" value="#6b7280" style="width:36px;height:28px;padding:0;border:1px solid var(--line);border-radius:4px;cursor:pointer;">
-            <button type="button" id="addRedirectCategoryBtn">追加</button>
+        <div style="display:grid;grid-template-columns:1fr;gap:24px;">
+          <div>
+            <h3 style="font-size:0.85rem;margin:0 0 8px;">URLカテゴリ</h3>
+            <div id="masterRedirectCategoryList"></div>
+            <div class="master-add-row">
+              <input id="newRedirectCategoryName" type="text" placeholder="新しいカテゴリ名">
+              <input id="newRedirectCategoryColor" type="color" value="#6b7280" style="flex:0 0 36px;width:36px;height:28px;padding:0;border:1px solid var(--line);border-radius:4px;cursor:pointer;">
+              <button type="button" id="addRedirectCategoryBtn">追加</button>
+            </div>
           </div>
         </div>
       </details>
@@ -1557,13 +1616,14 @@
         <div id="redirectPagination" style="display:flex;justify-content:center;gap:8px;margin-top:12px;"></div>
       </section>
 
-      <div id="redirectModal" class="modal-overlay" role="dialog" aria-modal="true">
+      <div id="redirectModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="redirectModalTitle">
         <section class="card modal-card">
           <div class="modal-header">
             <h2 id="redirectModalTitle" class="modal-title">URL追加</h2>
             <button class="close-btn" type="button" aria-label="閉じる" onclick="closeRedirectModal()">×</button>
           </div>
           <form id="redirectForm" class="form-grid">
+            <input id="redirectEditId" type="hidden" value="">
             <div class="form-field">
               <label for="redirectKeyInput">key</label>
               <input id="redirectKeyInput" name="key" type="text" required placeholder="sbc-ondalift">
@@ -1580,10 +1640,10 @@
               <label for="redirectNotesInput">備考</label>
               <input id="redirectNotesInput" name="notes" type="text" placeholder="404、リンク無し等">
             </div>
-            <input id="redirectEditId" type="hidden" value="">
             <div class="form-actions">
+              <button id="deleteRedirectButton" class="delete-btn" type="button" style="margin-right:auto;display:none;" data-admin-only>削除</button>
               <button class="btn-secondary" type="button" onclick="closeRedirectModal()">キャンセル</button>
-              <button id="saveRedirectButton" class="btn-primary" type="submit">保存</button>
+              <button id="saveRedirectButton" class="btn-primary" type="submit" data-admin-only>保存</button>
             </div>
           </form>
         </section>
@@ -4690,7 +4750,7 @@
       dirs.forEach(d => {
         const th = document.createElement('th');
         th.className = 'dir-header';
-        th.style.cssText = 'min-width:180px;font-size:11px;white-space:nowrap;';
+        th.style.cssText = 'min-width:180px;white-space:nowrap;';
         th.textContent = d.name + '（' + d.slug + '）';
         headerRow.appendChild(th);
       });
@@ -4752,17 +4812,16 @@
         const checked = state.selectedRedirectIds?.has(r.id) ? ' checked' : '';
         const dirCells = dirs.map(d => {
           const fullUrl = 'https://befine-clinic.jp/' + d.slug + '/clinic-detail?param=' + r.key;
-          return '<td style="font-size:11px;"><button type="button" class="copy-dir-url-btn" data-url="' + escapeHtml(fullUrl) + '" style="background:none;border:1px solid var(--line);border-radius:4px;padding:2px 6px;cursor:pointer;font-size:11px;white-space:nowrap;" title="' + escapeHtml(fullUrl) + '">コピー</button></td>';
+          return '<td><button type="button" class="copy-dir-url-btn" data-url="' + escapeHtml(fullUrl) + '" title="' + escapeHtml(fullUrl) + '">コピー</button></td>';
         }).join('');
 
-        return '<tr data-redirect-id="' + r.id + '">' +
-          '<td style="position:sticky;left:0;z-index:var(--z-sticky-col);background:#fff;"><input type="checkbox" class="redirect-select-cb redirect-edit-only" data-id="' + r.id + '"' + checked + (readOnly ? ' style="display:none;"' : '') + '></td>' +
-          '<td class="redirect-editable" data-field="key" style="position:sticky;left:36px;z-index:var(--z-sticky-col);background:#fff;font-weight:500;font-size:13px;' + (readOnly ? '' : 'cursor:pointer;') + '">' + escapeHtml(r.key) + '</td>' +
-          '<td class="redirect-editable" data-field="category" style="' + (readOnly ? '' : 'cursor:pointer;') + '"><span class="badge" style="font-size:11px;background:' + getRedirectCategoryColor(r.category) + ';color:#fff;">' + escapeHtml(r.category) + '</span></td>' +
-          '<td class="redirect-editable" data-field="url" style="font-size:11px;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' + (readOnly ? '' : 'cursor:pointer;') + '" title="' + escapeHtml(r.url || '') + '">' + (r.url ? escapeHtml(r.url) : '<span style="color:var(--muted);">—</span>') + '</td>' +
-          '<td class="redirect-editable" data-field="notes" style="font-size:12px;color:var(--muted);' + (readOnly ? '' : 'cursor:pointer;') + '">' + escapeHtml(r.notes || '') + '</td>' +
+        return '<tr class="redirect-row" data-redirect-id="' + r.id + '">' +
+          '<td class="redirect-sticky-cell redirect-sticky-select"><input type="checkbox" class="redirect-select-cb redirect-edit-only" data-id="' + r.id + '"' + checked + (readOnly ? ' style="display:none;"' : '') + '></td>' +
+          '<td class="redirect-sticky-cell redirect-sticky-key">' + escapeHtml(r.key) + '</td>' +
+          '<td><span class="badge" style="background:' + getRedirectCategoryColor(r.category) + ';color:#fff;">' + escapeHtml(r.category) + '</span></td>' +
+          '<td class="redirect-url-cell" title="' + escapeHtml(r.url || '') + '">' + (r.url ? escapeHtml(r.url) : '<span style="color:var(--muted);">—</span>') + '</td>' +
+          '<td class="redirect-notes-cell">' + escapeHtml(r.notes || '') + '</td>' +
           dirCells +
-          (readOnly ? '' : '<td><button type="button" class="delete-redirect-row" data-id="' + r.id + '" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:13px;" title="削除">✕</button></td>') +
           '</tr>';
       }).join('');
     }
@@ -4784,17 +4843,6 @@
         setTimeout(() => { btn.textContent = 'コピー'; }, 1500);
         return;
       }
-      // 行削除
-      const delBtn = e.target.closest('.delete-redirect-row');
-      if (delBtn) {
-        if (!confirm('このURLを削除しますか？')) return;
-        db.from('redirect_urls').delete().eq('id', delBtn.dataset.id).then(({ error }) => {
-          if (error) { showNotice('削除失敗: ' + error.message, 'error'); return; }
-          showNotice('削除しました');
-          loadRedirects();
-        });
-        return;
-      }
       // チェックボックス
       const cb = e.target.closest('.redirect-select-cb');
       if (cb) {
@@ -4803,64 +4851,15 @@
         updateRedirectBulkDeleteBtn();
         return;
       }
-      // インライン編集
-      if (!isAdmin()) return;
-      const cell = e.target.closest('.redirect-editable');
-      if (cell && !cell.querySelector('input') && !cell.querySelector('select')) {
-        const tr = cell.closest('tr');
-        const id = tr.dataset.redirectId;
-        const field = cell.dataset.field;
-        const r = state.redirectUrls.find(x => x.id === id);
-        if (!r) return;
-        const oldVal = r[field] || '';
 
-        if (field === 'category') {
-          const sel = document.createElement('select');
-          sel.style.cssText = 'width:100%;font-size:12px;padding:2px 4px;border:1px solid var(--primary);border-radius:3px;outline:none;';
-          sel.innerHTML = state.redirectCategories.map(c =>
-            '<option value="' + c.name + '"' + (c.name === oldVal ? ' selected' : '') + '>' + c.name + '</option>'
-          ).join('');
-          cell.textContent = '';
-          cell.appendChild(sel);
-          sel.focus();
-          const saveSel = async () => {
-            const newVal = sel.value;
-            if (newVal === oldVal) { renderRedirectsTab(); return; }
-            const { error } = await db.from('redirect_urls').update({ category: newVal, updated_at: new Date().toISOString() }).eq('id', id);
-            if (error) { showNotice('更新失敗: ' + error.message, 'error'); renderRedirectsTab(); return; }
-            r.category = newVal;
-            renderRedirectsTab();
-            showNotice('更新しました');
-          };
-          sel.addEventListener('change', saveSel);
-          sel.addEventListener('blur', () => renderRedirectsTab());
-        } else {
-          const input = document.createElement('input');
-          input.type = 'text';
-          input.value = oldVal;
-          input.style.cssText = 'width:100%;font-size:12px;padding:2px 4px;border:1px solid var(--primary);border-radius:3px;outline:none;box-sizing:border-box;';
-          cell.textContent = '';
-          cell.appendChild(input);
-          input.focus();
-          input.select();
-          const save = async () => {
-            const newVal = input.value.trim();
-            if (newVal === oldVal) { renderRedirectsTab(); return; }
-            const payload = {};
-            payload[field] = newVal || null;
-            payload.updated_at = new Date().toISOString();
-            const { error } = await db.from('redirect_urls').update(payload).eq('id', id);
-            if (error) { showNotice('更新失敗: ' + error.message, 'error'); renderRedirectsTab(); return; }
-            r[field] = newVal || null;
-            renderRedirectsTab();
-            showNotice('更新しました');
-          };
-          input.addEventListener('blur', save);
-          input.addEventListener('keydown', (ev) => {
-            if (ev.key === 'Enter') { ev.preventDefault(); input.blur(); }
-            if (ev.key === 'Escape') { renderRedirectsTab(); }
-          });
-        }
+      const interactive = e.target.closest('button, input, select, textarea, a');
+      if (interactive) return;
+
+      // 行クリックで編集モーダルを開く
+      if (!isAdmin()) return;
+      const row = e.target.closest('tr[data-redirect-id]');
+      if (row && document.getElementById('redirectRows').contains(row)) {
+        openRedirectEditModal(row.dataset.redirectId);
       }
     });
 
@@ -4870,11 +4869,13 @@
       document.getElementById('redirectForm').reset();
       // カテゴリselectを再構築
       renderRedirectsTab();
+      document.getElementById('deleteRedirectButton').style.display = 'none';
       document.getElementById('redirectModal').classList.add('open');
     }
 
     function openRedirectEditModal(id) {
-      const r = state.redirectUrls.find(x => x.id === id);
+      if (!isAdmin()) return;
+      const r = state.redirectUrls.find(x => String(x.id) === String(id));
       if (!r) return;
       document.getElementById('redirectEditId').value = r.id;
       document.getElementById('redirectModalTitle').textContent = 'URL編集';
@@ -4882,11 +4883,14 @@
       document.getElementById('redirectUrlInput').value = r.url || '';
       document.getElementById('redirectCategoryInput').value = r.category;
       document.getElementById('redirectNotesInput').value = r.notes || '';
+      document.getElementById('deleteRedirectButton').style.display = '';
       document.getElementById('redirectModal').classList.add('open');
     }
 
     function closeRedirectModal() {
       document.getElementById('redirectModal').classList.remove('open');
+      document.getElementById('redirectForm').reset();
+      document.getElementById('deleteRedirectButton').style.display = 'none';
     }
 
     // Overlay click で閉じる
@@ -4896,6 +4900,10 @@
 
     document.getElementById('redirectForm').addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (!isAdmin()) {
+        showNotice('編集権限がありません', 'error');
+        return;
+      }
       const fd = new FormData(e.target);
       const payload = {
         key: fd.get('key').trim(),
@@ -4917,6 +4925,32 @@
       await loadRedirects();
     });
 
+    async function deleteRedirect(id) {
+      if (!id) return;
+      if (!isAdmin()) {
+        showNotice('編集権限がありません', 'error');
+        return;
+      }
+      const redirect = state.redirectUrls.find(item => String(item.id) === String(id));
+      const name = redirect?.key || 'このURL';
+      if (!window.confirm(name + 'を削除しますか？')) return;
+
+      const { error } = await db.from('redirect_urls').delete().eq('id', id);
+      if (error) {
+        showNotice('削除失敗: ' + error.message, 'error');
+        return;
+      }
+
+      state.selectedRedirectIds?.delete(id);
+      closeRedirectModal();
+      showNotice('URLを削除しました');
+      await loadRedirects();
+    }
+
+    document.getElementById('deleteRedirectButton').addEventListener('click', async () => {
+      await deleteRedirect(document.getElementById('redirectEditId').value);
+    });
+
     // カテゴリマスタ管理
     function renderRedirectCategoryMaster() {
       const container = document.getElementById('masterRedirectCategoryList');
@@ -4925,11 +4959,10 @@
       state.redirectCategories.forEach(item => {
         const row = document.createElement('div');
         row.className = 'master-row';
-        row.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:4px;';
         row.innerHTML =
-          '<input type="color" value="' + item.color + '" data-cat-id="' + item.id + '" class="redirect-cat-color" style="width:24px;height:24px;padding:0;border:1px solid var(--line);border-radius:3px;cursor:pointer;">' +
-          '<span style="flex:1;font-size:0.8rem;"><span class="badge" style="background:' + item.color + ';color:#fff;font-size:11px;">' + escapeHtml(item.name) + '</span></span>' +
-          '<button type="button" class="delete-redirect-cat" data-id="' + item.id + '" style="font-size:11px;background:none;border:1px solid var(--line);border-radius:3px;padding:1px 6px;cursor:pointer;color:var(--muted);">削除</button>';
+          '<input type="color" value="' + item.color + '" data-cat-id="' + item.id + '" class="redirect-cat-color" style="flex:0 0 32px;width:32px;height:28px;padding:0;border:1px solid var(--line);border-radius:4px;cursor:pointer;">' +
+          '<span style="flex:1;font-size:0.8rem;"><span class="badge" style="background:' + item.color + ';color:#fff;">' + escapeHtml(item.name) + '</span></span>' +
+          '<button type="button" class="delete-master delete-redirect-cat" data-id="' + item.id + '">削除</button>';
         container.appendChild(row);
       });
     }
@@ -5246,6 +5279,7 @@
           { el: document.getElementById('articleDetailModal'), close: typeof closeArticleDetail === 'function' ? closeArticleDetail : () => {} },
           { el: document.getElementById('createModal'), close: closeCreateModal },
           { el: els.editModal, close: closeEditModal },
+          { el: document.getElementById('redirectModal'), close: closeRedirectModal },
           { el: els.orderModal, close: closeOrderModal },
           { el: els.workerModal, close: closeWorkerModal },
           { el: document.getElementById('categoryPickerModal'), close: closeCategoryPickerModal },
