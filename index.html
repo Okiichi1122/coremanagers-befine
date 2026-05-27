@@ -1520,6 +1520,7 @@
             <input id="redirectSearchInput" type="search" placeholder="key / URL / 備考で検索" style="width:200px;">
             <select id="redirectCategoryFilter"><option value="">全カテゴリ</option></select>
             <button id="addRedirectButton" class="btn-primary" type="button">＋ URL追加</button>
+            <button id="exportRedirectsCsvBtn" class="btn-secondary" type="button">CSVエクスポート</button>
             <button id="refreshRedirectsButton" class="btn-secondary" type="button">更新</button>
           </div>
         </div>
@@ -1529,10 +1530,10 @@
           <table aria-label="URL管理一覧" id="redirectTable">
             <thead>
               <tr id="redirectHeaderRow">
-                <th style="min-width:180px;position:sticky;left:0;z-index:var(--z-sticky-header);background:#fff;">key</th>
-                <th style="min-width:120px;">カテゴリ</th>
+                <th class="sortable" data-rsort="key" style="min-width:180px;position:sticky;left:0;z-index:var(--z-sticky-header);background:#fff;cursor:pointer;">key</th>
+                <th class="sortable" data-rsort="category" style="min-width:120px;cursor:pointer;">カテゴリ</th>
                 <th style="min-width:200px;">リダイレクト先URL</th>
-                <th style="min-width:120px;">備考</th>
+                <th class="sortable" data-rsort="notes" style="min-width:120px;cursor:pointer;">備考</th>
               </tr>
             </thead>
             <tbody id="redirectRows"></tbody>
@@ -2200,7 +2201,9 @@
       auditsLoaded: false,
       redirectUrls: [],
       redirectCategories: [],
-      redirectsLoaded: false
+      redirectsLoaded: false,
+      redirectSortKey: 'category',
+      redirectSortAsc: true
     };
 
     const els = {
@@ -4672,6 +4675,21 @@
         return true;
       });
 
+      // ソート
+      const sk = state.redirectSortKey;
+      const asc = state.redirectSortAsc;
+      filtered.sort((a, b) => {
+        const va = (a[sk] || '').toLowerCase();
+        const vb = (b[sk] || '').toLowerCase();
+        return asc ? va.localeCompare(vb) : vb.localeCompare(va);
+      });
+
+      // ソートインジケーター更新
+      document.querySelectorAll('#redirectHeaderRow th[data-rsort]').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+        if (th.dataset.rsort === sk) th.classList.add(asc ? 'sort-asc' : 'sort-desc');
+      });
+
       const tbody = document.getElementById('redirectRows');
       if (!filtered.length) {
         document.getElementById('redirectEmptyState').classList.remove('hidden');
@@ -4681,8 +4699,8 @@
       document.getElementById('redirectEmptyState').classList.add('hidden');
 
       tbody.innerHTML = filtered.map(r => {
-        const hasWarning = (r.notes || '').match(/404|リンク無し/);
-        const rowStyle = hasWarning ? 'background:#fef2f2;' : '';
+        const hasWarning = false;
+        const rowStyle = '';
         const dirCells = dirs.map(d => {
           const fullUrl = `https://befine-clinic.jp/${d.slug}/clinic-detail?param=${r.key}`;
           return `<td style="font-size:11px;">
@@ -4693,14 +4711,14 @@
         }).join('');
 
         return `<tr style="${rowStyle}" data-redirect-id="${r.id}">
-          <td class="redirect-editable" data-field="key" style="position:sticky;left:0;z-index:var(--z-sticky-col);background:${hasWarning ? '#fef2f2' : '#fff'};font-weight:500;font-size:13px;cursor:pointer;">
+          <td class="redirect-editable" data-field="key" style="position:sticky;left:0;z-index:var(--z-sticky-col);background:#fff;font-weight:500;font-size:13px;cursor:pointer;">
             ${escapeHtml(r.key)}
           </td>
           <td class="redirect-editable" data-field="category" style="cursor:pointer;"><span class="badge" style="font-size:11px;background:${getRedirectCategoryColor(r.category)};color:#fff;">${escapeHtml(r.category)}</span></td>
           <td class="redirect-editable" data-field="url" style="font-size:11px;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;" title="${escapeHtml(r.url || '')}">
             ${r.url ? escapeHtml(r.url) : '<span style="color:var(--muted);">—</span>'}
           </td>
-          <td class="redirect-editable" data-field="notes" style="font-size:12px;color:${hasWarning ? '#ef4444' : 'var(--muted)'};cursor:pointer;">${escapeHtml(r.notes || '')}</td>
+          <td class="redirect-editable" data-field="notes" style="font-size:12px;color:var(--muted);cursor:pointer;">${escapeHtml(r.notes || '')}</td>
           ${dirCells}
         </tr>`;
       }).join('');
@@ -4880,6 +4898,40 @@
       if (e.key === 'Enter') { e.preventDefault(); document.getElementById('addRedirectCategoryBtn').click(); }
     });
 
+    function exportRedirectsCsv() {
+      const items = state.redirectUrls;
+      const csvEscape = (v) => {
+        const s = String(v || '');
+        return s.includes(',') || s.includes('"') || s.includes('\n') ? '"' + s.replace(/"/g, '""') + '"' : s;
+      };
+      const header = 'key,url,category,備考';
+      const rows = items.map(r =>
+        [csvEscape(r.key), csvEscape(r.url || ''), csvEscape(r.category), csvEscape(r.notes || '')].join(',')
+      );
+      const csv = '\ufeff' + header + '\n' + rows.join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'redirect_urls.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById('redirectHeaderRow').addEventListener('click', (e) => {
+      const th = e.target.closest('th[data-rsort]');
+      if (!th) return;
+      const key = th.dataset.rsort;
+      if (state.redirectSortKey === key) {
+        state.redirectSortAsc = !state.redirectSortAsc;
+      } else {
+        state.redirectSortKey = key;
+        state.redirectSortAsc = true;
+      }
+      renderRedirectsTab();
+    });
+
+    document.getElementById('exportRedirectsCsvBtn').addEventListener('click', exportRedirectsCsv);
     document.getElementById('addRedirectButton').addEventListener('click', openRedirectModal);
     document.getElementById('refreshRedirectsButton').addEventListener('click', loadRedirects);
     document.getElementById('redirectSearchInput').addEventListener('input', renderRedirectsTab);
