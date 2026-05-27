@@ -4641,7 +4641,7 @@
 
       tbody.innerHTML = filtered.map(r => {
         const hasWarning = (r.notes || '').match(/404|リンク無し/);
-        const rowStyle = hasWarning ? 'background:rgba(239,68,68,0.05);' : '';
+        const rowStyle = hasWarning ? 'background:#fef2f2;' : '';
         const dirCells = dirs.map(d => {
           const fullUrl = `https://befine-clinic.jp/${d.slug}/clinic-detail?param=${r.key}`;
           return `<td style="font-size:11px;">
@@ -4652,7 +4652,7 @@
         }).join('');
 
         return `<tr style="${rowStyle}" data-redirect-id="${r.id}">
-          <td style="position:sticky;left:0;z-index:var(--z-sticky-col);background:${hasWarning ? 'rgba(239,68,68,0.05)' : '#fff'};font-weight:500;font-size:13px;">
+          <td style="position:sticky;left:0;z-index:var(--z-sticky-col);background:${hasWarning ? '#fef2f2' : '#fff'};font-weight:500;font-size:13px;">
             <span style="cursor:pointer;" onclick="openRedirectEditModal('${r.id}')">${escapeHtml(r.key)}</span>
           </td>
           <td><span class="badge" style="font-size:11px;">${escapeHtml(r.category)}</span></td>
