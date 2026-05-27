@@ -2798,8 +2798,8 @@
           <td data-field="release_date">${escapeHtml(article.release_date || '')}</td>
           <td data-field="no1_client">${clientBadge(article.no1_client)}</td>
           <td data-field="seasonal_appeal">${escapeHtml(article.seasonal_appeal || 'なし')}</td>
-          <td data-field="cta_replacement">${escapeHtml(article.cta_replacement || '未対応')}</td>
-          <td data-field="anchor_replacement">${escapeHtml(article.anchor_replacement || '未対応')}</td>
+          <td data-field="cta_replacement"><span class="status-badge ${(article.cta_replacement || '未対応') === '完了' ? 'status-green' : 'status-gray'}">${escapeHtml(article.cta_replacement || '未対応')}</span></td>
+          <td data-field="anchor_replacement"><span class="status-badge ${(article.anchor_replacement || '未対応') === '完了' ? 'status-green' : 'status-gray'}">${escapeHtml(article.anchor_replacement || '未対応')}</span></td>
           <td data-field="survey_status">${surveyLabel}</td>
           <td data-field="survey_url" class="url-cell">${article.survey_url ? `<a href="${escapeHtml(safeHref(article.survey_url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(article.survey_url)}</a>` : ''}</td>
           <td data-field="figma_url" class="url-cell">${article.figma_url ? `<a href="${escapeHtml(safeHref(article.figma_url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(article.figma_url)}</a>` : ''}</td>
