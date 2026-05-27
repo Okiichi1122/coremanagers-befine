@@ -4592,7 +4592,7 @@
 
     function renderRedirectsTab() {
       const items = state.redirectUrls;
-      const dirs = (state.directories || []).map(d => d.name);
+      const dirs = (state.directories || []).map(d => ({ name: d.name, slug: d.slug || d.name }));
 
       // KPI
       document.getElementById('redirectTotalCount').textContent = items.length;
@@ -4614,8 +4614,8 @@
       dirs.forEach(d => {
         const th = document.createElement('th');
         th.className = 'dir-header';
-        th.style.cssText = 'min-width:140px;font-size:11px;white-space:nowrap;';
-        th.textContent = d;
+        th.style.cssText = 'min-width:180px;font-size:11px;white-space:nowrap;';
+        th.textContent = `${d.name}（${d.slug}）`;
         headerRow.appendChild(th);
       });
 
@@ -4643,7 +4643,7 @@
         const hasWarning = (r.notes || '').match(/404|リンク無し/);
         const rowStyle = hasWarning ? 'background:rgba(239,68,68,0.05);' : '';
         const dirCells = dirs.map(d => {
-          const fullUrl = `https://befine-clinic.jp/${d}/clinic-detail?param=${r.key}`;
+          const fullUrl = `https://befine-clinic.jp/${d.slug}/clinic-detail?param=${r.key}`;
           return `<td style="font-size:11px;">
             <button type="button" class="copy-dir-url-btn" data-url="${escapeHtml(fullUrl)}"
               style="background:none;border:1px solid var(--line);border-radius:4px;padding:2px 6px;cursor:pointer;font-size:11px;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;"
