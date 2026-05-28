@@ -3272,7 +3272,7 @@
 
       input.addEventListener('blur', save);
       input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+        if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); input.blur(); }
         if (e.key === 'Escape') { td.innerHTML = origHtml; }
       });
       if (input.tagName === 'SELECT') {
@@ -3359,7 +3359,7 @@
 
       input.addEventListener('blur', save);
       input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+        if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); input.blur(); }
         if (e.key === 'Escape') { td.innerHTML = origHtml; }
       });
       if (input.tagName === 'SELECT') {
@@ -5290,8 +5290,7 @@
         }
         return;
       }
-      const mod = e.metaKey || e.ctrlKey;
-      if (!mod) return;
+      if (!e.metaKey) return;
       if (e.key.toLowerCase() === 'f') { e.preventDefault(); document.getElementById('articleSearchInput')?.focus(); }
       if (e.key.toLowerCase() === 'n') { e.preventDefault(); openCreateModal(); }
     });
